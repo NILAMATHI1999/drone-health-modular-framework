@@ -1,0 +1,34 @@
+uint8 OK=0
+uint8 WARNING=1
+uint8 ERROR=2
+uint8 STALE=3
+uint8 UNKNOWN=4
+uint8 INACTIVE=5
+
+
+uint8 REASON_NONE=0
+uint8 REASON_DEADLINE_MISSED=1
+uint8 REASON_LIVELINESS_LOST=2
+uint8 REASON_HEARTBEAT_TIMEOUT=3
+uint8 REASON_QOS_INCOMPATIBLE=4
+uint8 REASON_NODE_NOT_REGISTERED=5
+uint8 REASON_MESSAGE_TIMEOUT=6
+uint8 REASON_MAINTENANCE=7
+uint8 REASON_DEREGISTERED=8
+uint8 REASON_OPTIONAL_DISABLED=9
+uint8 REASON_MISSION_NOT_REQUIRED=10
+
+
+
+std_msgs/Header header
+
+string node_name
+string topic_name
+
+uint8 status
+uint8 reason
+
+string message
+float32 last_update_age_s
+
+

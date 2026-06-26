@@ -1,0 +1,30 @@
+safety_fusion_node:
+    ros__parameters:
+      nearest_obstacle_topic: /lidar/nearest_obstacle
+      velocity_topic: /vehicle/velocity
+      health_status_topic: /health/status
+      safety_status_topic: /safety/status
+      heartbeat_topic: /safety_fusion/heartbeat
+
+      required_health_topics:
+        - /lidar/nearest_obstacle
+        - /vehicle/velocity
+
+      evaluation_period_ms: 100
+      health_status_timeout_ms: 1500
+
+
+      obstacle_timeout_ms: 700
+      velocity_timeout_ms: 700
+
+
+
+      max_deceleration_mps2: 1.5
+      reaction_time_s: 0.2
+      safety_margin_m: 0.5
+
+      heartbeat_period_ms: 500
+      heartbeat_deadline_ms: 700
+      heartbeat_liveliness_ms: 1500
+
+

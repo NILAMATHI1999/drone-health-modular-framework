@@ -1,0 +1,44 @@
+  management_node:
+    ros__parameters:
+      supervisor_status_topic: /supervisor/status
+      supervisor_status_timeout_ms: 1000
+
+      module_ids:
+        - lidar
+        - flow
+        - safety
+        - health
+        - supervisor
+        - camera
+
+      lidar.critical: true
+      lidar.topics:
+        - /lidar/scan
+        - /lidar/heartbeat
+        - /lidar/nearest_obstacle
+        - /lidar_obstacle_processor/heartbeat
+
+      flow.critical: true
+      flow.topics:
+        - /vehicle/velocity
+        - /flow/heartbeat
+
+      safety.critical: true
+      safety.topics:
+        - /safety/status
+        - /safety_fusion/heartbeat
+
+      health.critical: true
+      health.topics:
+        - /health/status
+
+      supervisor.critical: true
+      supervisor.topics:
+        - /supervisor/status
+        - /supervisor/heartbeat
+
+      camera.critical: false
+      camera.topics:
+        - /camera/image_raw
+        - /camera/heartbeat
+

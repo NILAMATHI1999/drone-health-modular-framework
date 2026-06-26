@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>drone_health_registrable_template</name>
+  <version>0.1.0</version>
+  <description>Reusable template node showing heartbeat and planned deregistration behavior.</description>
+
+  <maintainer email="nilamathirp0199@gmail.com">Nila</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>drone_health_interfaces</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

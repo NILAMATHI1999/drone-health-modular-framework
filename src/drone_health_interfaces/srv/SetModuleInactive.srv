@@ -1,0 +1,7 @@
+string module_name
+bool inactive
+string reason
+---
+bool success
+string message
+

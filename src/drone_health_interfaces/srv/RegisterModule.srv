@@ -1,0 +1,14 @@
+string module_name
+bool critical
+string heartbeat_topic
+string heartbeat_type
+int32 heartbeat_deadline_ms
+int32 heartbeat_liveliness_ms
+
+string[] data_topics
+string[] data_topic_types
+---
+bool success
+string message
+
+

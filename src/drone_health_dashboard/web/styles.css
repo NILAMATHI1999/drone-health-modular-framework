@@ -1,0 +1,651 @@
+:root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --text: #17202a;
+    --muted: #667085;
+    --line: #d7dde5;
+
+    --green: #1f8a4c;
+    --green-bg: #e7f6ed;
+    --yellow: #a86f00;
+    --yellow-bg: #fff4d6;
+    --red: #b42318;
+    --red-bg: #ffe4e2;
+    --gray-bg: #eef1f5;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .shell {
+    width: min(1200px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 24px 0 32px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+
+  h1,
+  h2,
+  p {
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 750;
+  }
+
+  .topbar p,
+  .timestamp {
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .timestamp {
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .status-card,
+  .metric-card,
+  .panel,
+  .health-tile,
+  .event-row {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+
+  .status-card {
+    padding: 16px;
+    border-left-width: 8px;
+    min-height: 142px;
+  }
+
+  .status-card h2 {
+    font-size: 30px;
+    line-height: 1.1;
+    margin: 8px 0;
+  }
+
+  .eyebrow {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .message {
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .green {
+    border-left-color: var(--green);
+    background: linear-gradient(90deg, var(--green-bg), var(--surface) 42%);
+  }
+
+  .yellow {
+    border-left-color: var(--yellow);
+    background: linear-gradient(90deg, var(--yellow-bg), var(--surface) 42%);
+  }
+
+  .red {
+    border-left-color: var(--red);
+    background: linear-gradient(90deg, var(--red-bg), var(--surface) 42%);
+  }
+
+  .gray {
+    border-left-color: #98a2b3;
+    background: var(--gray-bg);
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-label {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .metric-value {
+    font-size: 25px;
+    font-weight: 750;
+    margin-top: 6px;
+  }
+
+  .metric-unit {
+    color: var(--muted);
+    font-size: 14px;
+    margin-left: 4px;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr);
+    gap: 12px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .panel-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+
+  .panel-heading h2 {
+    font-size: 18px;
+  }
+
+  .panel-heading span {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .health-tile {
+    padding: 12px;
+    border-left-width: 6px;
+  }
+
+  .health-title {
+    font-weight: 750;
+    overflow-wrap: anywhere;
+  }
+
+  .health-meta {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .health-status {
+    font-size: 13px;
+    font-weight: 800;
+    margin-top: 8px;
+  }
+
+  .event-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .event-row {
+    padding: 10px;
+    border-left-width: 6px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .event-time {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 860px) {
+    .status-grid,
+    .metrics-grid,
+    .content-grid,
+    .health-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .topbar {
+      flex-direction: column;
+    }
+
+    .status-card h2 {
+      font-size: 24px;
+    }
+  }
+
+
+
+.mission-scene {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.scene-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.scene-header h2 {
+  font-size: 20px;
+}
+
+.scene-header p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.mission-badge {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 750;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.mission-badge.idle {
+  background: var(--gray-bg);
+  color: #344054;
+}
+
+.mission-badge.active {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.mission-badge.hold {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+
+.mission-badge.failsafe,
+.mission-badge.emergency {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.scene-area {
+  position: relative;
+  height: 180px;
+  margin-top: 16px;
+  border: 1px solid #e2e7ef;
+  border-radius: 8px;
+  background: linear-gradient(#f8fbff 0 70%, #eef3ea 70% 100%);
+  overflow: hidden;
+}
+
+.base-station {
+  position: absolute;
+  left: 24px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #3b4454;
+  font-weight: 650;
+}
+
+.base-icon {
+  font-size: 28px;
+}
+
+.drone-visual {
+  position: absolute;
+  transition: 0.4s ease;
+}
+
+.drone-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #2f6fed;
+  color: #2f6fed;
+  font-size: 28px;
+  box-shadow: 0 8px 20px rgba(31, 42, 68, 0.16);
+}
+
+.drone-visual.grounded {
+  left: 84px;
+  bottom: 26px;
+}
+
+.drone-visual.flying {
+  left: 52%;
+  top: 38px;
+}
+
+.drone-visual.returning {
+  left: 32%;
+  top: 70px;
+}
+
+.drone-visual.hold {
+  left: 48%;
+  top: 72px;
+}
+
+.drone-visual.emergency {
+  left: 52%;
+  top: 92px;
+}
+
+.drone-visual.returning .drone-icon,
+.drone-visual.emergency .drone-icon {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.scene-warning {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid #f5b5b5;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-weight: 750;
+}
+
+.hidden {
+  display: none;
+}
+
+#managementCard,
+#inactiveCard {
+  margin-bottom: 12px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.status-row span {
+  color: var(--muted);
+}
+
+#managementMessage {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.inactive-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.inactive-item {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f4f6f8;
+  color: #344054;
+}
+
+.inactive-item span {
+  overflow-wrap: anywhere;
+}
+
+.inactive-item em {
+  font-style: normal;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .scene-header {
+    flex-direction: column;
+  }
+
+  .inactive-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Compact operator layout */
+.status-grid {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.status-card {
+  padding: 10px 12px;
+  min-height: 92px;
+  border-left-width: 6px;
+}
+
+.status-card h2 {
+  font-size: 22px;
+  margin: 5px 0;
+}
+
+.status-card h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.eyebrow {
+  font-size: 11px;
+}
+
+.message,
+.status-card p {
+  font-size: 13px;
+}
+
+.mission-scene {
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.scene-header h2 {
+  font-size: 17px;
+}
+
+.scene-header p {
+  font-size: 13px;
+}
+
+.scene-area {
+  height: 112px;
+  margin-top: 10px;
+}
+
+.base-station {
+  left: 18px;
+  bottom: 10px;
+  font-size: 12px;
+}
+
+.base-icon {
+  font-size: 22px;
+}
+
+.drone-icon {
+  width: 34px;
+  height: 34px;
+  font-size: 21px;
+}
+
+.drone-visual.grounded {
+  left: 66px;
+  bottom: 18px;
+}
+
+.drone-visual.flying {
+  left: 52%;
+  top: 24px;
+}
+
+.drone-visual.returning {
+  left: 34%;
+  top: 42px;
+}
+
+.drone-visual.hold {
+  left: 48%;
+  top: 42px;
+}
+
+.drone-visual.emergency {
+  left: 52%;
+  top: 52px;
+}
+
+.scene-warning {
+  right: 10px;
+  bottom: 10px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.management-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.compact-card {
+  min-height: 0;
+}
+
+.status-row {
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+#managementMessage {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.inactive-list {
+  gap: 5px;
+  margin-top: 6px;
+  max-height: 150px;
+  overflow: auto;
+}
+
+.inactive-item {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(70px, auto);
+  gap: 6px;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+
+.metrics-grid {
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.metric-card {
+  padding: 9px 10px;
+}
+
+.metric-label {
+  font-size: 12px;
+}
+
+.metric-value {
+  font-size: 20px;
+  margin-top: 3px;
+}
+
+.content-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.panel {
+  padding: 10px;
+}
+
+.panel-heading {
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+}
+
+.panel-heading h2 {
+  font-size: 16px;
+}
+
+.health-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 7px;
+}
+
+.health-tile {
+  padding: 8px;
+  border-left-width: 5px;
+}
+
+.health-title {
+  font-size: 13px;
+}
+
+.health-meta {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.health-status {
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+@media (max-width: 760px) {
+  .status-grid,
+  .management-grid,
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

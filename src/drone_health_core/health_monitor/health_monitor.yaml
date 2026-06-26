@@ -1,0 +1,121 @@
+health_monitor_node:
+    ros__parameters:
+      check_period_ms: 100
+      status_publish_period_ms: 1000
+
+      monitor_ids:
+        - lidar_scan
+        - lidar_heartbeat
+        - flow_heartbeat
+        - processor_heartbeat
+        - nearest_obstacle
+        - vehicle_velocity
+        - safety_fusion_heartbeat
+        - supervisor_heartbeat
+        - camera_image
+        - camera_heartbeat
+        - management_heartbeat
+
+
+
+      lidar_scan.node_name: simulated_lidar_driver_node
+      lidar_scan.topic_name: /lidar/scan
+      lidar_scan.kind: data
+      lidar_scan.message_type: laser_scan
+      lidar_scan.reliability: best_effort
+      lidar_scan.deadline_ms: 200
+      lidar_scan.timeout_ms: 500
+
+      lidar_heartbeat.node_name: simulated_lidar_driver_node
+      lidar_heartbeat.topic_name: /lidar/heartbeat
+      lidar_heartbeat.kind: heartbeat
+      lidar_heartbeat.message_type: string
+      lidar_heartbeat.reliability: reliable
+      lidar_heartbeat.deadline_ms: 300
+      lidar_heartbeat.liveliness_ms: 1000
+      lidar_heartbeat.timeout_ms: 1500
+
+      flow_heartbeat.node_name: simulated_flow_sensor_node
+      flow_heartbeat.topic_name: /flow/heartbeat
+      flow_heartbeat.kind: heartbeat
+      flow_heartbeat.message_type: string
+      flow_heartbeat.reliability: reliable
+      flow_heartbeat.deadline_ms: 300
+      flow_heartbeat.liveliness_ms: 1000
+      flow_heartbeat.timeout_ms: 1500
+
+      processor_heartbeat.node_name: lidar_obstacle_processor_node
+      processor_heartbeat.topic_name: /lidar_obstacle_processor/heartbeat
+      processor_heartbeat.kind: heartbeat
+      processor_heartbeat.message_type: string
+      processor_heartbeat.reliability: reliable
+      processor_heartbeat.deadline_ms: 700
+      processor_heartbeat.liveliness_ms: 1500
+      processor_heartbeat.timeout_ms: 2000
+
+      safety_fusion_heartbeat.node_name: safety_fusion_node
+      safety_fusion_heartbeat.topic_name: /safety_fusion/heartbeat
+      safety_fusion_heartbeat.kind: heartbeat
+      safety_fusion_heartbeat.message_type: string
+      safety_fusion_heartbeat.reliability: reliable
+      safety_fusion_heartbeat.deadline_ms: 700
+      safety_fusion_heartbeat.liveliness_ms: 1500
+      safety_fusion_heartbeat.timeout_ms: 2000
+
+      supervisor_heartbeat.node_name: supervisor_node
+      supervisor_heartbeat.topic_name: /supervisor/heartbeat
+      supervisor_heartbeat.kind: heartbeat
+      supervisor_heartbeat.message_type: string
+      supervisor_heartbeat.reliability: reliable
+      supervisor_heartbeat.deadline_ms: 700
+      supervisor_heartbeat.liveliness_ms: 1500
+      supervisor_heartbeat.timeout_ms: 2000
+
+
+
+      nearest_obstacle.node_name: lidar_obstacle_processor_node
+      nearest_obstacle.topic_name: /lidar/nearest_obstacle
+      nearest_obstacle.kind: data
+      nearest_obstacle.message_type: float32
+      nearest_obstacle.reliability: reliable
+      nearest_obstacle.deadline_ms: 250
+      nearest_obstacle.timeout_ms: 700
+
+      vehicle_velocity.node_name: simulated_flow_sensor_node
+      vehicle_velocity.topic_name: /vehicle/velocity
+      vehicle_velocity.kind: data
+      vehicle_velocity.message_type: twist_stamped
+      vehicle_velocity.reliability: best_effort
+      vehicle_velocity.deadline_ms: 200
+      vehicle_velocity.timeout_ms: 500
+
+      camera_image.node_name: simulated_camera_node
+      camera_image.topic_name: /camera/image_raw
+      camera_image.kind: data
+      camera_image.message_type: image
+      camera_image.reliability: best_effort
+      camera_image.deadline_ms: 250
+      camera_image.timeout_ms: 700
+
+      camera_heartbeat.node_name: simulated_camera_node
+      camera_heartbeat.topic_name: /camera/heartbeat
+      camera_heartbeat.kind: heartbeat
+      camera_heartbeat.message_type: string
+      camera_heartbeat.reliability: reliable
+      camera_heartbeat.deadline_ms: 700
+      camera_heartbeat.liveliness_ms: 1500
+      camera_heartbeat.timeout_ms: 2000
+
+
+      management_heartbeat.node_name: management_node
+      management_heartbeat.topic_name: /management/heartbeat
+      management_heartbeat.kind: heartbeat
+      management_heartbeat.message_type: string
+      management_heartbeat.reliability: reliable
+      management_heartbeat.deadline_ms: 700
+      management_heartbeat.liveliness_ms: 1500
+      management_heartbeat.timeout_ms: 2000
+
+
+
+

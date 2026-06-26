@@ -1,0 +1,28 @@
+supervisor_node:
+    ros__parameters:
+      safety_status_topic: /safety/status
+      health_status_topic: /health/status
+      management_state_topic: /management/state
+      supervisor_status_topic: /supervisor/status
+      heartbeat_topic: /supervisor/heartbeat
+
+      evaluation_period_ms: 100
+      safety_status_timeout_ms: 500
+      health_status_timeout_ms: 1500
+      management_state_timeout_ms: 1500
+
+      heartbeat_period_ms: 500
+      heartbeat_deadline_ms: 700
+      heartbeat_liveliness_ms: 1500
+
+      required_health_topics:
+          - /lidar/scan
+          - /lidar/heartbeat
+          - /lidar/nearest_obstacle
+          - /lidar_obstacle_processor/heartbeat
+          - /vehicle/velocity
+          - /flow/heartbeat
+          - /safety_fusion/heartbeat
+
+
+
