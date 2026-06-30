@@ -84,7 +84,6 @@ Data topics are sent as registry metadata, but generic dynamic data-topic monito
 Future students can extend this template for:
 
 - camera modules
-- battery modules
 - GPS modules
 - network modules
 - inspection payloads

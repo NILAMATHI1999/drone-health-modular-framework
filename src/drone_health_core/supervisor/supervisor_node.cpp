@@ -45,6 +45,7 @@ private:
     declare_parameter<std::string>("health_status_topic", "/health/status");
     declare_parameter<std::string>("supervisor_status_topic", "/supervisor/status");
     declare_parameter<std::string>("management_state_topic", "/management/state");
+    declare_parameter<std::string>("network_status_topic", "/network_status");
 
 
     declare_parameter<std::string>("heartbeat_topic", "/supervisor/heartbeat");
@@ -53,6 +54,8 @@ private:
     declare_parameter<int>("safety_status_timeout_ms", 500);
     declare_parameter<int>("health_status_timeout_ms", 1500);
     declare_parameter<int>("management_state_timeout_ms", 1500);
+    declare_parameter<int>("network_status_timeout_ms", 3000);
+    declare_parameter<int>("network_failsafe_delay_ms", 10000);
 
     declare_parameter<std::vector<std::string>>(
       "required_health_topics",
@@ -69,7 +72,10 @@ private:
     health_status_topic_ = get_parameter("health_status_topic").as_string();
     supervisor_status_topic_ = get_parameter("supervisor_status_topic").as_string();
     management_state_topic_ = get_parameter("management_state_topic").as_string();
+    network_status_topic_ = get_parameter("network_status_topic").as_string();
     management_state_timeout_ms_ = get_parameter("management_state_timeout_ms").as_int();
+    network_status_timeout_ms_ = get_parameter("network_status_timeout_ms").as_int();
+    network_failsafe_delay_ms_ = get_parameter("network_failsafe_delay_ms").as_int();
 
 
     heartbeat_topic_ = get_parameter("heartbeat_topic").as_string();
@@ -90,6 +96,7 @@ private:
       health_status_topic_.empty() ||
       supervisor_status_topic_.empty() ||
       management_state_topic_.empty() ||
+      network_status_topic_.empty() ||
       heartbeat_topic_.empty())
     {
       throw std::runtime_error("supervisor topic parameters must not be empty");
@@ -97,7 +104,10 @@ private:
 
     if (evaluation_period_ms_ <= 0 ||
       safety_status_timeout_ms_ <= 0 ||
-      health_status_timeout_ms_ <= 0 || management_state_timeout_ms_ <= 0)
+      health_status_timeout_ms_ <= 0 ||
+      management_state_timeout_ms_ <= 0 ||
+      network_status_timeout_ms_ <= 0 ||
+      network_failsafe_delay_ms_ <= 0)
     {
       throw std::runtime_error("supervisor timing parameters must be greater than 0");
     }
@@ -142,6 +152,11 @@ private:
       rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
       std::bind(&SupervisorNode::handle_management_state, this,
       std::placeholders::_1));
+
+    network_subscription_ = create_subscription<std_msgs::msg::String>(
+      network_status_topic_,
+      rclcpp::QoS(rclcpp::KeepLast(10)).reliable(),
+      std::bind(&SupervisorNode::handle_network_status, this, std::placeholders::_1));
 
 
     supervisor_publisher_ = create_publisher<SupervisorStatus>(
@@ -201,6 +216,13 @@ private:
     }
   }
 
+  void handle_network_status(const std_msgs::msg::String::SharedPtr msg)
+  {
+    latest_network_status_ = msg->data;
+    has_network_status_ = true;
+    last_network_status_time_ = now();
+  }
+
 
   void evaluate_supervisor_state()
   {
@@ -236,6 +258,32 @@ private:
       supervisor_publisher_->publish(status);
       return;
     }
+
+    const bool network_available = network_status_fresh() && network_status_ok();
+    if (!network_available) {
+      if (network_unavailable_since_.nanoseconds() == 0) {
+        network_unavailable_since_ = now();
+      }
+
+      const double unavailable_s = (now() - network_unavailable_since_).seconds();
+      const double failsafe_delay_s =
+        static_cast<double>(network_failsafe_delay_ms_) / 1000.0;
+
+      status.mode = unavailable_s >= failsafe_delay_s ?
+        SupervisorStatus::FAILSAFE :
+        SupervisorStatus::HOLD;
+      status.reason = network_status_fresh() ?
+        SupervisorStatus::REASON_NETWORK_UNHEALTHY :
+        SupervisorStatus::REASON_NETWORK_STATUS_STALE;
+      status.command_allowed = false;
+      status.message = unavailable_s >= failsafe_delay_s ?
+        "network lost for more than failsafe delay" :
+        "waiting for network recovery";
+      supervisor_publisher_->publish(status);
+      return;
+    }
+
+    network_unavailable_since_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
     if (!health_status_fresh()) {
       status.mode = mission_active_ ?
@@ -387,6 +435,25 @@ private:
     return age_s <= timeout_s;
   }
 
+  bool network_status_fresh() const
+  {
+    if (!has_network_status_) {
+      return false;
+    }
+
+    const double age_s = (now() - last_network_status_time_).seconds();
+    const double timeout_s =
+      static_cast<double>(network_status_timeout_ms_) / 1000.0;
+
+    return age_s <= timeout_s;
+  }
+
+  bool network_status_ok() const
+  {
+    return latest_network_status_ == "NETWORK_HEALTHY" ||
+           latest_network_status_ == "NETWORK_BACKUP";
+  }
+
   bool required_health_topics_waiting(std::string & message) const
   {
     int waiting_count = 0;
@@ -527,6 +594,8 @@ private:
     std::string failed_health_message;
     if (!safety_status_fresh() ||
       !health_status_fresh() ||
+      !network_status_fresh() ||
+      !network_status_ok() ||
       latest_safety_status_.state != SafetyStatus::SAFE ||
       maintenance_mode_ ||
       planned_inactive_required_topics(failed_health_message) ||
@@ -548,7 +617,9 @@ private:
     std_msgs::msg::String heartbeat;
     heartbeat.data = "supervisor_node alive";
     heartbeat_publisher_->publish(heartbeat);
-    heartbeat_publisher_->assert_liveliness();
+    if (!heartbeat_publisher_->assert_liveliness()) {
+      RCLCPP_WARN(get_logger(), "Failed to assert supervisor liveliness");
+    }
   }
 
   std::string safety_status_topic_;
@@ -556,11 +627,14 @@ private:
   std::string supervisor_status_topic_;
   std::string heartbeat_topic_;
   std::string management_state_topic_;
+  std::string network_status_topic_;
 
   int evaluation_period_ms_;
   int safety_status_timeout_ms_;
   int health_status_timeout_ms_;
   int management_state_timeout_ms_{1500};
+  int network_status_timeout_ms_{3000};
+  int network_failsafe_delay_ms_{10000};
 
   std::vector<std::string> required_health_topics_;
 
@@ -574,16 +648,20 @@ private:
   bool maintenance_mode_{false};
   bool mission_active_{false};
   bool has_management_state_{false};
+  bool has_network_status_{false};
 
 
   SafetyStatus latest_safety_status_;
   std::unordered_map<std::string, HealthStatus> latest_health_by_topic_;
   std::unordered_map<std::string, std::string> planned_inactive_topics_;
+  std::string latest_network_status_{"UNKNOWN"};
 
 
   rclcpp::Time last_safety_status_time_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_health_status_time_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_management_state_time_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time last_network_status_time_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time network_unavailable_since_{0, 0, RCL_ROS_TIME};
 
 
   rclcpp::QoS heartbeat_qos_{rclcpp::KeepLast(10)};
@@ -598,6 +676,7 @@ private:
   rclcpp::TimerBase::SharedPtr heartbeat_timer_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service_;
   rclcpp::Subscription<ManagementState>::SharedPtr management_subscription_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr network_subscription_;
 
 
 };

@@ -553,6 +553,95 @@
   margin-bottom: 8px;
 }
 
+.network-panel {
+  margin-bottom: 8px;
+}
+
+.network-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.network-tab {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: #344054;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.network-tab.active {
+  background: var(--surface);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.network-tab-panel {
+  display: none;
+  min-height: 88px;
+}
+
+.network-tab-panel.active {
+  display: block;
+}
+
+#networkReason,
+#atSummary,
+#wifiSsid,
+#wifiAvailableSsids {
+  overflow-wrap: anywhere;
+}
+
+#atSummary {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#wifiSignalBars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  min-height: 18px;
+}
+
+.signal-bar {
+  display: inline-block;
+  width: 6px;
+  border-radius: 2px 2px 0 0;
+  background: #d0d5dd;
+}
+
+.signal-bar:nth-child(1) {
+  height: 5px;
+}
+
+.signal-bar:nth-child(2) {
+  height: 8px;
+}
+
+.signal-bar:nth-child(3) {
+  height: 12px;
+}
+
+.signal-bar:nth-child(4) {
+  height: 16px;
+}
+
+.signal-bar.active {
+  background: var(--green);
+}
+
 .compact-card {
   min-height: 0;
 }

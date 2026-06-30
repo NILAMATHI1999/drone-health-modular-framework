@@ -5,7 +5,7 @@
 Reusable ROS 2 template node for modules that need runtime registration and planned deregistration
 with the drone health monitoring framework.
 
-Future students can copy this node pattern when adding modules such as camera, GPS, battery,
+Future students can copy this node pattern when adding modules such as camera, GPS,
 network, payload, or inspection modules.
 
 ## Inputs
