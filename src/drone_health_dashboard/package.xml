@@ -1,19 +1,19 @@
-  <?xml version="1.0"?>
-  <package format="3">
-    <name>drone_health_dashboard</name>
-    <version>0.1.0</version>
-    <description>Web dashboard and ROS bridge for the drone health monitoring framework.</description>
+<?xml version="1.0"?>
+<package format="3">
+  <name>drone_health_dashboard</name>
+  <version>0.1.0</version>
+  <description>Web dashboard and ROS bridge for the drone health monitoring framework.</description>
 
-    <maintainer email="nilamathirp0199@gmail.com">nila</maintainer>
-    <license>MIT</license>
+  <maintainer email="nilamathirp0199@gmail.com">nila</maintainer>
+  <license>MIT</license>
 
-    <exec_depend>rclpy</exec_depend>
-    <exec_depend>std_msgs</exec_depend>
-    <exec_depend>drone_health_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>drone_health_interfaces</exec_depend>
 
-    <export>
-      <build_type>ament_python</build_type>
-    </export>
-  </package>
-
-
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

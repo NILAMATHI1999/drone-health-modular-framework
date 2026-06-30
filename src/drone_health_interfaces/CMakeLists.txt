@@ -15,6 +15,8 @@ endif()
     "msg/HealthStatus.msg"
     "msg/SupervisorStatus.msg"
     "msg/ManagementState.msg"
+    "msg/MonitorSpec.msg"
+    "msg/ManagedModule.msg"
     "srv/SetModuleInactive.srv"
     "srv/RegisterModule.srv"
     "srv/DeregisterModule.srv"

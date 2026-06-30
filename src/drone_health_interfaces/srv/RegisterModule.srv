@@ -7,8 +7,7 @@ int32 heartbeat_liveliness_ms
 
 string[] data_topics
 string[] data_topic_types
+drone_health_interfaces/MonitorSpec[] monitors
 ---
 bool success
 string message
-
-

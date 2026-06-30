@@ -86,6 +86,59 @@ function renderEvents(data) {
   `).join("");
 }
 
+
+function renderKnownModules(management) {
+  const element = document.getElementById("knownModulesList");
+  if (!element) {
+    return;
+  }
+
+  const modules = management.managed_modules || [];
+  if (!modules.length) {
+    element.innerHTML = '<p class="health-meta">No registered modules.</p>';
+    return;
+  }
+
+  element.innerHTML = modules.map(module => {
+    const state = module.state || "UNKNOWN";
+    const reason = module.last_reason || "";
+    const monitors = module.monitors ? module.monitors.length : 0;
+    const critical = module.critical ? "critical" : "optional";
+
+    return `
+      <div class="module-pill ${state === "PLANNED_INACTIVE" ? "inactive" : ""}">
+        <span>${module.module_name || "unknown_module"}</span>
+        <strong>${state}</strong>
+        <em>${critical}</em>
+        <em>${monitors} monitors</em>
+        <em>${reason}</em>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderRejected(management) {
+  const element = document.getElementById("rejectedList");
+  if (!element) {
+    return;
+  }
+
+  const modules = management.rejected_modules || [];
+  const reasons = management.rejected_module_reasons || [];
+
+  if (!modules.length) {
+    element.innerHTML = '<p class="health-meta">No rejected registrations.</p>';
+    return;
+  }
+
+  element.innerHTML = modules.map((name, index) => `
+    <div class="inactive-item rejected">
+      <span>${name}</span>
+      <em>${reasons[index] || ""}</em>
+    </div>
+  `).join("");
+}
+
 function renderManagement(data) {
   const management = data.management || {};
 
@@ -101,86 +154,22 @@ function renderManagement(data) {
   const inactiveList = document.getElementById("inactiveList");
   const modules = management.planned_inactive_modules || [];
   const moduleReasons = management.planned_inactive_module_reasons || [];
-  const topics = management.planned_inactive_topics || [];
-  const topicReasons = management.planned_inactive_topic_reasons || [];
+  if (modules.length === 0) {
+    inactiveList.innerHTML =
+      '<p class="health-meta">No planned inactive modules.</p>';
+  } else {
+    const moduleRows = modules.map((name, index) => `
+      <div class="inactive-item module">
+        <span>${name}</span>
+        <em>${moduleReasons[index] || ""}</em>
+      </div>
+    `);
 
-  if (modules.length === 0 && topics.length === 0) {
-    inactiveList.innerHTML = '<p class="health-meta">No planned inactive modules or topics.</p>';
-    return;
+    inactiveList.innerHTML = moduleRows.join("");
   }
 
-  const moduleRows = modules.map((name, index) => `
-    <div class="inactive-item module">
-      <strong>Module</strong>
-      <span>${name}</span>
-      <em>${moduleReasons[index] || ""}</em>
-    </div>
-  `);
-
-  const topicRows = topics.map((name, index) => `
-    <div class="inactive-item topic">
-      <strong>Topic</strong>
-      <span>${name}</span>
-      <em>${topicReasons[index] || ""}</em>
-    </div>
-  `);
-
-  inactiveList.innerHTML = [...moduleRows, ...topicRows].join("");
-}
-
-function renderMissionScene(data) {
-  const management = data.management || {};
-  const supervisor = data.supervisor || {};
-  const missionActive = Boolean(management.mission_active);
-  const mode = supervisor.mode || "NO DATA";
-
-  const badge = document.getElementById("missionBadge");
-  const summary = document.getElementById("missionSummary");
-  const drone = document.getElementById("droneVisual");
-  const warning = document.getElementById("sceneWarning");
-
-  badge.className = "mission-badge";
-  drone.className = "drone-visual";
-  warning.classList.add("hidden");
-
-  if (!missionActive) {
-    badge.classList.add("idle");
-    badge.textContent = "AT BASE";
-    drone.classList.add("grounded");
-    summary.textContent = "Mission inactive. Drone is at base.";
-    return;
-  }
-
-  if (mode === "NORMAL") {
-    badge.classList.add("active");
-    badge.textContent = "MISSION ACTIVE";
-    drone.classList.add("flying");
-    summary.textContent = "Mission active. System is normal.";
-    return;
-  }
-
-  if (mode === "FAILSAFE") {
-    badge.classList.add("failsafe");
-    badge.textContent = "FAILSAFE";
-    drone.classList.add("returning");
-    warning.classList.remove("hidden");
-    summary.textContent = "Failsafe active. Drone should return or hold safely.";
-    return;
-  }
-
-  if (mode === "EMERGENCY_STOP") {
-    badge.classList.add("emergency");
-    badge.textContent = "EMERGENCY";
-    drone.classList.add("emergency");
-    warning.classList.remove("hidden");
-    summary.textContent = "Emergency stop active. Movement blocked.";
-    return;
-  }
-
-  badge.classList.add("hold");
-  badge.textContent = mode;
-  drone.classList.add("hold");
-  summary.textContent = `Mission active, supervisor state: ${mode}`;
+  renderKnownModules(management);
+  renderRejected(management);
 }
 
 function render(data) {
@@ -210,7 +199,6 @@ function render(data) {
     commandAllowed ? "ALLOWED" : "BLOCKED";
   setCardColor("commandCard", commandAllowed ? "green" : "red");
 
-  renderMissionScene(data);
   renderManagement(data);
   renderMetrics(data);
   renderHealth(data);
@@ -244,12 +232,6 @@ events.onerror = () => {
   document.getElementById("commandAllowed").textContent = "BLOCKED";
   setCardColor("commandCard", "gray");
 
-  document.getElementById("missionBadge").className = "mission-badge idle";
-  document.getElementById("missionBadge").textContent = "DISCONNECTED";
-  document.getElementById("missionSummary").textContent =
-    "Dashboard bridge disconnected. Live ROS state is unavailable.";
-  document.getElementById("droneVisual").className = "drone-visual grounded";
-  document.getElementById("sceneWarning").classList.remove("hidden");
 
   document.getElementById("managementReasonText").textContent = "STALE";
   document.getElementById("managementMessage").textContent =

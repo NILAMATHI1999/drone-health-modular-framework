@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import math
 import mimetypes
 import threading
 import time
@@ -50,10 +51,13 @@ class DashboardBridgeNode(Node):
                 "maintenance_mode": False,
                 "reason": "NO_DATA",
                 "message": "no management data",
+                "managed_modules": [],
                 "planned_inactive_modules": [],
                 "planned_inactive_module_reasons": [],
                 "planned_inactive_topics": [],
                 "planned_inactive_topic_reasons": [],
+                "rejected_modules": [],
+                "rejected_module_reasons": [],
             },
             "metrics": {
                 "nearest_obstacle_m": None,
@@ -70,6 +74,9 @@ class DashboardBridgeNode(Node):
                 "safety": None,
                 "health": None,
                 "management": None,
+                "nearest_obstacle": None,
+                "velocity": None,
+
             },
         }
 
@@ -101,7 +108,7 @@ class DashboardBridgeNode(Node):
             velocity_qos,
         )
 
-        self.web_root = Path(get_package_share_directory("drone_health_monitoring")) / "web"
+        self.web_root = Path(get_package_share_directory("drone_health_dashboard")) / "web"
         self.httpd = self.make_server()
         self.server_thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.server_thread.start()
@@ -151,7 +158,11 @@ class DashboardBridgeNode(Node):
                 self.send_response(200)
                 self.send_header("Content-Type", content_type)
                 self.end_headers()
-                self.wfile.write(file_path.read_bytes())
+                try:
+                    self.wfile.write(file_path.read_bytes())
+                except (BrokenPipeError, ConnectionResetError):
+                    return
+
 
             def log_message(self, format, *args):
                 return
@@ -167,6 +178,8 @@ class DashboardBridgeNode(Node):
         safety_seen = snapshot["last_seen"]["safety"]
         health_seen = snapshot["last_seen"].get("health")
         management_seen = snapshot["last_seen"].get("management")
+        nearest_seen = snapshot["last_seen"].get("nearest_obstacle")
+        velocity_seen = snapshot["last_seen"].get("velocity")
 
         if supervisor_seen is None:
             snapshot["supervisor"] = {
@@ -212,14 +225,26 @@ class DashboardBridgeNode(Node):
                 "maintenance_mode": False,
                 "reason": "NO_DATA",
                 "message": "waiting for management state",
+                "managed_modules": [],
                 "planned_inactive_modules": [],
                 "planned_inactive_module_reasons": [],
                 "planned_inactive_topics": [],
                 "planned_inactive_topic_reasons": [],
+                "rejected_modules": [],
+                "rejected_module_reasons": [],
             }
         elif now - management_seen > 2.0:
             snapshot["management"]["reason"] = "STALE"
             snapshot["management"]["message"] = "management state is not updating"
+
+        if nearest_seen is not None and now - nearest_seen > 1.5:
+            snapshot["metrics"]["nearest_obstacle_m"] = None
+
+        if velocity_seen is not None and now - velocity_seen > 1.5:
+            snapshot["metrics"]["speed_mps"] = None
+            snapshot["metrics"]["velocity_x_mps"] = None
+            snapshot["metrics"]["velocity_y_mps"] = None
+            snapshot["metrics"]["velocity_z_mps"] = None
 
         if health_seen is not None and now - health_seen > 2.0:
             for item in snapshot["health"].values():
@@ -267,6 +292,12 @@ class DashboardBridgeNode(Node):
             if old_status and (old_status != status or old_reason != reason):
                 self.add_event(f"{msg.topic_name}: {status} / {reason}", color)
 
+    def safe_number(self, value):
+        value = float(value)
+        if not math.isfinite(value):
+            return None
+        return round(value, 2)
+
     def handle_safety(self, msg):
         with self.lock:
             self.state["last_seen"]["safety"] = time.time()
@@ -274,10 +305,10 @@ class DashboardBridgeNode(Node):
                 "state": self.safety_state_text(msg.state),
                 "reason": self.safety_reason_text(msg.reason),
                 "color": self.safety_color(msg.state),
-                "nearest_obstacle_m": round(float(msg.nearest_obstacle_m), 2),
-                "speed_mps": round(float(msg.speed_mps), 2),
-                "braking_distance_m": round(float(msg.braking_distance_m), 2),
-                "required_clearance_m": round(float(msg.required_clearance_m), 2),
+                "nearest_obstacle_m": self.safe_number(msg.nearest_obstacle_m),
+                "speed_mps": self.safe_number(msg.speed_mps),
+                "braking_distance_m": self.safe_number(msg.braking_distance_m),
+                "required_clearance_m": self.safe_number(msg.required_clearance_m),
             }
 
     def handle_management(self, msg):
@@ -291,10 +322,32 @@ class DashboardBridgeNode(Node):
                 "maintenance_mode": bool(msg.maintenance_mode),
                 "reason": reason,
                 "message": msg.message,
+                "managed_modules": [
+                    {
+                        "module_name": module.module_name,
+                        "critical": bool(module.critical),
+                        "state": module.state,
+                        "last_reason": module.last_reason,
+                        "monitors": [
+                            {
+                                "topic_name": monitor.topic_name,
+                                "kind": monitor.kind,
+                                "message_type": monitor.message_type,
+                                "reliability": monitor.reliability,
+                                "deadline_ms": int(monitor.deadline_ms),
+                                "liveliness_ms": int(monitor.liveliness_ms),
+                            }
+                            for monitor in module.monitors
+                        ],
+                    }
+                    for module in msg.managed_modules
+                ],
                 "planned_inactive_modules": list(msg.planned_inactive_modules),
                 "planned_inactive_module_reasons": list(msg.planned_inactive_module_reasons),
                 "planned_inactive_topics": list(msg.planned_inactive_topics),
                 "planned_inactive_topic_reasons": list(msg.planned_inactive_topic_reasons),
+                "rejected_modules": list(msg.rejected_modules),
+                "rejected_module_reasons": list(msg.rejected_module_reasons),
             }
 
             if old_message and old_message != msg.message:
@@ -321,17 +374,19 @@ class DashboardBridgeNode(Node):
 
     def handle_nearest(self, msg):
         with self.lock:
-            self.state["metrics"]["nearest_obstacle_m"] = round(float(msg.data), 2)
+            self.state["last_seen"]["nearest_obstacle"] = time.time()
+            self.state["metrics"]["nearest_obstacle_m"] = self.safe_number(msg.data)
 
     def handle_velocity(self, msg):
         linear = msg.twist.linear
         speed = (linear.x ** 2 + linear.y ** 2 + linear.z ** 2) ** 0.5
 
         with self.lock:
-            self.state["metrics"]["speed_mps"] = round(float(speed), 2)
-            self.state["metrics"]["velocity_x_mps"] = round(float(linear.x), 2)
-            self.state["metrics"]["velocity_y_mps"] = round(float(linear.y), 2)
-            self.state["metrics"]["velocity_z_mps"] = round(float(linear.z), 2)
+            self.state["last_seen"]["velocity"] = time.time()
+            self.state["metrics"]["speed_mps"] = self.safe_number(speed)
+            self.state["metrics"]["velocity_x_mps"] = self.safe_number(linear.x)
+            self.state["metrics"]["velocity_y_mps"] = self.safe_number(linear.y)
+            self.state["metrics"]["velocity_z_mps"] = self.safe_number(linear.z)
 
     def health_status_text(self, value):
         return {

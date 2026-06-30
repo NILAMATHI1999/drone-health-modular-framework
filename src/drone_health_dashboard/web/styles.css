@@ -548,7 +548,7 @@
 
 .management-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -575,7 +575,7 @@
 }
 
 .inactive-item {
-  grid-template-columns: 56px minmax(0, 1fr) minmax(70px, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(70px, auto);
   gap: 6px;
   padding: 5px 7px;
   font-size: 12px;
@@ -646,6 +646,55 @@
   .status-grid,
   .management-grid,
   .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+#moduleRegistryCard {
+  margin-bottom: 12px;
+}
+
+.module-list {
+  display: grid;
+  gap: 5px;
+  max-height: 150px;
+  overflow: auto;
+}
+
+.module-pill {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto minmax(70px, auto);
+  gap: 8px;
+  align-items: center;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: #f4f6f8;
+  font-size: 12px;
+}
+
+.module-pill span {
+  overflow-wrap: anywhere;
+}
+
+.module-pill strong {
+  font-size: 11px;
+  color: var(--green);
+}
+
+.module-pill em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.module-pill.inactive strong {
+  color: #667085;
+}
+
+@media (max-width: 760px) {
+  .module-pill {
     grid-template-columns: 1fr;
   }
 }

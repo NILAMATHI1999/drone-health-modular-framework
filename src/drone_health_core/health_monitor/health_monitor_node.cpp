@@ -5,7 +5,10 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
-
+#include <unordered_set>
+#include "drone_health_interfaces/msg/monitor_spec.hpp"
+#include "rclcpp/generic_subscription.hpp"
+#include "rclcpp/serialized_message.hpp"
 
 #include "drone_health_interfaces/msg/health_status.hpp"
 #include "drone_health_interfaces/msg/management_state.hpp"
@@ -37,6 +40,7 @@ public:
 private:
   using HealthStatus = drone_health_interfaces::msg::HealthStatus;
   using ManagementState = drone_health_interfaces::msg::ManagementState;
+  using MonitorSpec = drone_health_interfaces::msg::MonitorSpec;
 
 
   struct MonitorConfig
@@ -60,6 +64,8 @@ private:
   {
     declare_parameter<int>("check_period_ms", 100);
     declare_parameter<int>("status_publish_period_ms", 1000);
+    declare_parameter<int>("runtime_timeout_grace_ms", 500);
+
     declare_parameter<std::vector<std::string>>("monitor_ids", std::vector<std::string>{});
   }
 
@@ -73,6 +79,12 @@ private:
       throw std::runtime_error(
         "check_period_ms and status_publish_period_ms must be greater than 0");
     }
+    runtime_timeout_grace_ms_ = get_parameter("runtime_timeout_grace_ms").as_int();
+
+    if (runtime_timeout_grace_ms_ < 0) {
+      throw std::runtime_error("runtime_timeout_grace_ms must not be negative");
+    }
+
 
     if (monitor_ids_.empty()) {
       throw std::runtime_error("monitor_ids must not be empty");
@@ -227,9 +239,7 @@ private:
         std::placeholders::_1));
   }
 
-
-  void handle_management_state(const ManagementState::SharedPtr
-  msg)
+  void handle_management_state(const ManagementState::SharedPtr msg)
   {
     planned_inactive_reasons_.clear();
 
@@ -239,74 +249,257 @@ private:
 
     for (size_t i = 0; i < count; ++i) {
       planned_inactive_reasons_[msg->planned_inactive_topics[i]] =
-
         management_reason_to_health_reason(msg->planned_inactive_topic_reasons[i]);
     }
 
-    add_runtime_heartbeat_monitors(msg);
+    reconcile_runtime_monitors(msg);
   }
 
-
-
-  void add_runtime_heartbeat_monitors(const ManagementState::SharedPtr msg)
+  void reconcile_runtime_monitors(const ManagementState::SharedPtr msg)
   {
-    const auto count = std::min(
+    std::unordered_set<std::string> expected_runtime_modules;
+
+    for (const auto & module : msg->managed_modules) {
+      if (module.monitors.empty()) {
+        continue;
+      }
+
+      if (module.state == "PLANNED_INACTIVE") {
+        continue;
+      }
+
+      expected_runtime_modules.insert(module.module_name);
+
+      const auto existing = runtime_specs_by_module_.find(module.module_name);
+
+      if (existing != runtime_specs_by_module_.end() &&
+        monitor_specs_equal(existing->second, module.monitors))
       {
-        msg->registry_topic_modules.size(),
-        msg->registry_topics.size(),
-        msg->registry_topic_types.size(),
-        msg->registry_topic_is_heartbeat.size(),
-        msg->registry_topic_deadline_ms.size(),
-        msg->registry_topic_liveliness_ms.size()
-      });
-
-    for (size_t i = 0; i < count; ++i) {
-      if (!msg->registry_topic_is_heartbeat[i]) {
         continue;
       }
 
-      if (msg->registry_topic_types[i] != "std_msgs/msg/String") {
-        continue;
+      remove_runtime_module(module.module_name);
+      add_runtime_module(module.module_name, module.monitors);
+    }
+
+    std::vector<std::string> modules_to_remove;
+
+    for (const auto & item : runtime_specs_by_module_) {
+      if (expected_runtime_modules.find(item.first) ==
+        expected_runtime_modules.end())
+      {
+        modules_to_remove.push_back(item.first);
       }
+    }
 
-      const std::string topic_name = msg->registry_topics[i];
-
-      if (topic_name.empty()) {
-        continue;
-      }
-
-      if (monitor_id_by_topic_.find(topic_name) != monitor_id_by_topic_.end()) {
-        continue;
-      }
-
-      MonitorConfig config;
-      config.id = "runtime_" + msg->registry_topic_modules[i] + "_heartbeat";
-      config.node_name = msg->registry_topic_modules[i];
-      config.topic_name = topic_name;
-      config.kind = "heartbeat";
-      config.message_type = "string";
-      config.reliability = "reliable";
-      config.deadline_ms = msg->registry_topic_deadline_ms[i];
-      config.liveliness_ms = msg->registry_topic_liveliness_ms[i];
-      config.timeout_ms = std::max(config.liveliness_ms + 500, config.deadline_ms + 500);
-      config.has_liveliness = config.liveliness_ms > 0;
-
-      validate_monitor_config(config);
-
-      monitor_ids_.push_back(config.id);
-      monitor_id_by_topic_[config.topic_name] = config.id;
-      monitors_.emplace(config.id, config);
-
-      setup_subscription_for_monitor(config.id);
-
-      RCLCPP_INFO(
-        get_logger(),
-        "Runtime heartbeat monitor added: %s -> %s",
-        config.node_name.c_str(),
-        config.topic_name.c_str());
+    for (const auto & module_name : modules_to_remove) {
+      remove_runtime_module(module_name);
     }
   }
 
+  bool monitor_specs_equal(
+    const std::vector<MonitorSpec> & left,
+    const std::vector<MonitorSpec> & right) const
+  {
+    if (left.size() != right.size()) {
+      return false;
+    }
+
+    for (size_t i = 0; i < left.size(); ++i) {
+      if (left[i].topic_name != right[i].topic_name ||
+        left[i].kind != right[i].kind ||
+        left[i].message_type != right[i].message_type ||
+        left[i].reliability != right[i].reliability ||
+        left[i].deadline_ms != right[i].deadline_ms ||
+        left[i].liveliness_ms != right[i].liveliness_ms)
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  std::string runtime_message_type_to_health_type(
+    const std::string & message_type) const
+  {
+    if (message_type == "std_msgs/msg/String") {
+      return "string";
+    }
+
+    if (message_type == "std_msgs/msg/Float32") {
+      return "float32";
+    }
+
+    if (message_type == "geometry_msgs/msg/TwistStamped") {
+      return "twist_stamped";
+    }
+
+    if (message_type == "sensor_msgs/msg/LaserScan") {
+      return "laser_scan";
+    }
+
+    if (message_type == "sensor_msgs/msg/Image") {
+      return "image";
+    }
+
+    return message_type;
+  }
+
+  bool validate_runtime_monitor(
+    const MonitorSpec & monitor,
+    std::string & error) const
+  {
+    if (monitor.topic_name.empty() || monitor.topic_name.front() != '/') {
+      error = "topic must start with /";
+      return false;
+    }
+
+    if (monitor.kind != "heartbeat" && monitor.kind != "data") {
+      error = "kind must be heartbeat or data";
+      return false;
+    }
+
+    if (monitor.message_type.find("/msg/") == std::string::npos) {
+      error = "message_type must be a ROS 2 message type";
+      return false;
+    }
+
+    if (monitor.reliability != "reliable" &&
+      monitor.reliability != "best_effort")
+    {
+      error = "reliability must be reliable or best_effort";
+      return false;
+    }
+
+    if (monitor.deadline_ms < 0 || monitor.liveliness_ms < 0) {
+      error = "deadline/liveliness must not be negative";
+      return false;
+    }
+
+    if (monitor.kind == "heartbeat" &&
+      monitor.deadline_ms == 0 &&
+      monitor.liveliness_ms == 0)
+    {
+      error = "heartbeat must provide deadline or liveliness";
+      return false;
+    }
+
+    return true;
+  }
+
+  void add_runtime_module(
+    const std::string & module_name,
+    const std::vector<MonitorSpec> & monitors)
+  {
+    runtime_specs_by_module_[module_name] = monitors;
+
+    for (const auto & monitor : monitors) {
+      std::string error;
+
+      if (!validate_runtime_monitor(monitor, error)) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Skipping runtime monitor %s: %s",
+          monitor.topic_name.c_str(),
+          error.c_str());
+        continue;
+      }
+
+      if (monitor_id_by_topic_.find(monitor.topic_name) !=
+        monitor_id_by_topic_.end())
+      {
+        continue;
+      }
+
+      const std::string id =
+        "runtime:" + module_name + ":" + monitor.topic_name;
+
+      MonitorConfig config;
+      config.id = id;
+      config.node_name = module_name;
+      config.topic_name = monitor.topic_name;
+      config.kind = monitor.kind;
+      config.message_type = runtime_message_type_to_health_type(monitor.message_type);
+      config.reliability = monitor.reliability.empty() ? "reliable" : monitor.reliability;
+      config.deadline_ms = monitor.deadline_ms;
+      config.liveliness_ms = monitor.liveliness_ms;
+      config.timeout_ms =
+        std::max(monitor.deadline_ms, monitor.liveliness_ms) +
+        runtime_timeout_grace_ms_;
+      config.has_liveliness = config.liveliness_ms > 0;
+
+      if (config.timeout_ms <= 0) {
+        config.timeout_ms = runtime_timeout_grace_ms_ > 0 ?
+          runtime_timeout_grace_ms_ :
+          1000;
+      }
+
+      try {
+        monitors_.emplace(id, config);
+        monitor_ids_.push_back(id);
+        monitor_id_by_topic_[config.topic_name] = id;
+
+        const auto qos = make_qos(monitors_.at(id));
+        auto options = make_subscription_options(id);
+
+        runtime_subscriptions_[id] =
+          create_generic_subscription(
+            monitor.topic_name,
+            monitor.message_type,
+            qos,
+            [this, id](std::shared_ptr<rclcpp::SerializedMessage>) {
+              handle_message(id);
+            },
+            options);
+
+        runtime_ids_by_module_[module_name].push_back(id);
+
+        RCLCPP_INFO(
+          get_logger(),
+          "Runtime monitor added: %s -> %s",
+          module_name.c_str(),
+          monitor.topic_name.c_str());
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Failed to add runtime monitor %s: %s",
+          monitor.topic_name.c_str(),
+          e.what());
+
+        monitor_id_by_topic_.erase(config.topic_name);
+        monitors_.erase(id);
+        monitor_ids_.erase(
+          std::remove(monitor_ids_.begin(), monitor_ids_.end(), id),
+          monitor_ids_.end());
+      }
+    }
+  }
+
+  void remove_runtime_module(const std::string & module_name)
+  {
+    const auto item = runtime_ids_by_module_.find(module_name);
+
+    if (item != runtime_ids_by_module_.end()) {
+      for (const auto & id : item->second) {
+        const auto config = monitors_.find(id);
+
+        if (config != monitors_.end()) {
+          monitor_id_by_topic_.erase(config->second.topic_name);
+        }
+
+        runtime_subscriptions_.erase(id);
+        monitors_.erase(id);
+        monitor_ids_.erase(
+          std::remove(monitor_ids_.begin(), monitor_ids_.end(), id),
+          monitor_ids_.end());
+      }
+
+      runtime_ids_by_module_.erase(item);
+    }
+
+    runtime_specs_by_module_.erase(module_name);
+  }
 
   uint8_t management_reason_to_health_reason(const std::string & reason) const
   {
@@ -328,6 +521,7 @@ private:
 
     return HealthStatus::REASON_NONE;
   }
+
   bool topic_planned_inactive(const std::string & topic_name) const
   {
     return planned_inactive_reasons_.find(topic_name) !=
@@ -366,16 +560,14 @@ private:
     return "planned inactive";
   }
 
-    void setup_subscriptions()
-    {
-      for (const auto & id : monitor_ids_) {
-        setup_subscription_for_monitor(id);
-      }
+  void setup_subscriptions()
+  {
+    for (const auto & id : monitor_ids_) {
+      setup_subscription_for_monitor(id);
     }
+  }
 
-
-
-    void setup_subscription_for_monitor(const std::string & id)
+  void setup_subscription_for_monitor(const std::string & id)
   {
     const auto & config = monitors_.at(id);
     const auto qos = make_qos(config);
@@ -440,7 +632,6 @@ private:
     throw std::runtime_error("unsupported message_type for monitor " + id);
   }
 
-
   void setup_timer()
   {
     check_timer_ = create_wall_timer(
@@ -486,11 +677,11 @@ private:
 
         if (should_publish_periodic_status(config)) {
           publish_status(
-              config,
-              HealthStatus::INACTIVE,
-              reason,
-              planned_inactive_message(reason),
-              0.0F);
+            config,
+            HealthStatus::INACTIVE,
+            reason,
+            planned_inactive_message(reason),
+            0.0F);
           config.last_status_publish = now();
         }
 
@@ -516,11 +707,11 @@ private:
             HealthStatus::REASON_MESSAGE_TIMEOUT;
 
           publish_status(
-        config,
-        HealthStatus::STALE,
-        reason,
-        "message timeout fallback",
-        static_cast<float>(age_s));
+            config,
+            HealthStatus::STALE,
+            reason,
+            "message timeout fallback",
+            static_cast<float>(age_s));
 
           config.last_status_publish = now();
         }
@@ -557,7 +748,6 @@ private:
       return;
     }
 
-
     if (config.seen) {
       age_s = static_cast<float>((now() - config.last_update).seconds());
     }
@@ -585,15 +775,19 @@ private:
 
   int check_period_ms_;
   int status_publish_period_ms_;
+  int runtime_timeout_grace_ms_{500};
+
   std::vector<std::string> monitor_ids_;
   std::unordered_map<std::string, MonitorConfig> monitors_;
   std::unordered_map<std::string, uint8_t> planned_inactive_reasons_;
 
+  std::unordered_map<std::string, std::vector<MonitorSpec>> runtime_specs_by_module_;
+  std::unordered_map<std::string, std::vector<std::string>> runtime_ids_by_module_;
+  std::unordered_map<std::string, rclcpp::GenericSubscription::SharedPtr> runtime_subscriptions_;
 
   rclcpp::Publisher<HealthStatus>::SharedPtr health_status_publisher_;
   rclcpp::TimerBase::SharedPtr check_timer_;
   rclcpp::Subscription<ManagementState>::SharedPtr management_subscription_;
-
 
   std::vector<rclcpp::Subscription<std_msgs::msg::String>::SharedPtr> string_subscriptions_;
   std::vector<rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> float_subscriptions_;
@@ -602,9 +796,7 @@ private:
   std::vector<rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr> scan_subscriptions_;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr> image_subscriptions_;
   std::unordered_map<std::string, std::string> monitor_id_by_topic_;
-
 };
-
 
 int main(int argc, char ** argv)
 {

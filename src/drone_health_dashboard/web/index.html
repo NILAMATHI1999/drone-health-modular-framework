@@ -1,111 +1,95 @@
 <!doctype html>
-  <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Drone Health Dashboard</title>
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body>
-    <main class="shell">
-      <header class="topbar">
-        <div>
-          <h1>Drone Health Dashboard</h1>
-          <p id="connectionText">Connecting to ROS dashboard bridge...</p>
-        </div>
-        <div id="updatedAt" class="timestamp">--</div>
-      </header>
-      
-	        
-
-      <section class="mission-scene">
-    <div class="scene-header">
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drone Health Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
       <div>
-        <h2>Drone Mission View</h2>
-        <p id="missionSummary">Waiting for ROS state...</p>
+        <h1>Drone Health Dashboard</h1>
+        <p id="connectionText">Connecting to ROS dashboard bridge...</p>
       </div>
-      <span id="missionBadge" class="mission-badge idle">IDLE</span>
-    </div>
+      <div id="updatedAt" class="timestamp">--</div>
+    </header>
 
-    <div class="scene-area">
-      <div class="base-station">
-        <span class="base-icon">⌂</span>
-        <span>Base</span>
-      </div>
+    <section class="status-grid">
+      <article id="supervisorCard" class="status-card yellow">
+        <span class="eyebrow">System</span>
+        <h2 id="supervisorMode">NO DATA</h2>
+        <p id="supervisorReason">Waiting</p>
+        <p id="supervisorMessage" class="message">waiting for supervisor status</p>
+      </article>
 
-      <div id="droneVisual" class="drone-visual grounded">
-        <span class="drone-icon">✣</span>
-      </div>
+      <article id="safetyCard" class="status-card yellow">
+        <span class="eyebrow">Safety</span>
+        <h2 id="safetyState">NO DATA</h2>
+        <p id="safetyReason">Waiting</p>
+      </article>
 
-      <div id="sceneWarning" class="scene-warning hidden">
-        System attention required
-      </div>
-    </div>
-  </section>
+      <article id="commandCard" class="status-card yellow">
+        <span class="eyebrow">Command</span>
+        <h2 id="commandAllowed">BLOCKED</h2>
+        <p>Normal command permission</p>
+      </article>
+    </section>
 
-      <section class="status-grid">
-        <article id="supervisorCard" class="status-card yellow">
-          <span class="eyebrow">System</span>
-          <h2 id="supervisorMode">NO DATA</h2>
-          <p id="supervisorReason">Waiting</p>
-          <p id="supervisorMessage" class="message">waiting for supervisor status</p>
-        </article>
-
-        <article id="safetyCard" class="status-card yellow">
-          <span class="eyebrow">Safety</span>
-          <h2 id="safetyState">NO DATA</h2>
-          <p id="safetyReason">Waiting</p>
-        </article>
-
-        <article id="commandCard" class="status-card yellow">
-          <span class="eyebrow">Command</span>
-          <h2 id="commandAllowed">BLOCKED</h2>
-          <p>Normal command permission</p>
-        </article>
-      </section>
-      
-
-      <section class="management-grid">
-        <section class="status-card compact-card" id="managementCard">
-          <h3>Management</h3>
-          <div class="status-row">
-            <span>Mission</span>
-            <strong id="missionActiveText">false</strong>
-          </div>
-          <div class="status-row">
-            <span>Maintenance</span>
-            <strong id="maintenanceModeText">false</strong>
-          </div>
-          <div class="status-row">
-            <span>Reason</span>
-            <strong id="managementReasonText">NONE</strong>
-          </div>
-          <p id="managementMessage">No management data</p>
-        </section>
-
-        <section class="status-card compact-card" id="inactiveCard">
-          <h3>Planned Inactive</h3>
-          <div id="inactiveList" class="inactive-list">
-            <p>No planned inactive modules</p>
-          </div>
-        </section>
+    <section class="management-grid">
+      <section class="status-card compact-card" id="managementCard">
+        <h3>Management</h3>
+        <div class="status-row">
+          <span>Mission</span>
+          <strong id="missionActiveText">false</strong>
+        </div>
+        <div class="status-row">
+          <span>Maintenance</span>
+          <strong id="maintenanceModeText">false</strong>
+        </div>
+        <div class="status-row">
+          <span>Reason</span>
+          <strong id="managementReasonText">NONE</strong>
+        </div>
+        <p id="managementMessage">No management data</p>
       </section>
 
-      <section class="metrics-grid" id="metricsGrid"></section>
-
-      <section class="content-grid">
-        <section class="panel">
-          <div class="panel-heading">
-            <h2>Node Health</h2>
-            <span>green / yellow / red</span>
-          </div>
-          <div id="healthGrid" class="health-grid"></div>
-        </section>
-
+      <section class="status-card compact-card" id="inactiveCard">
+        <h3>Planned Inactive</h3>
+        <div id="inactiveList" class="inactive-list">
+          <p>No planned inactive modules</p>
+        </div>
       </section>
-    </main>
 
-    <script src="/app.js"></script>
-  </body>
-  </html>
+      <section class="status-card compact-card" id="moduleRegistryCard">
+        <h3>Known Modules</h3>
+        <div id="knownModulesList" class="module-list">
+          <p>No registered modules</p>
+        </div>
+      </section>
 
+      <section class="status-card compact-card" id="rejectedCard">
+        <h3>Rejected Registrations</h3>
+        <div id="rejectedList" class="inactive-list">
+          <p>No rejected registrations</p>
+        </div>
+      </section>
+    </section>
+
+    <section class="metrics-grid" id="metricsGrid"></section>
+
+    <section class="content-grid">
+      <section class="panel">
+        <div class="panel-heading">
+          <h2>Node Health</h2>
+          <span>green / yellow / red</span>
+        </div>
+        <div id="healthGrid" class="health-grid"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

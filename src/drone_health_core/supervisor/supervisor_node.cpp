@@ -269,14 +269,25 @@ private:
       return;
     }
 
-    std::string failed_health_message;
-    if (!required_health_topics_ok(failed_health_message)) {
+    std::string health_message;
+    if (required_health_topics_waiting(health_message)) {
+      status.mode = mission_active_ ?
+        SupervisorStatus::FAILSAFE :
+        SupervisorStatus::HOLD;
+      status.reason = SupervisorStatus::REASON_HEALTH_STATUS_STALE;
+      status.command_allowed = false;
+      status.message = health_message;
+      supervisor_publisher_->publish(status);
+      return;
+    }
+
+    if (!required_health_topics_ok(health_message)) {
       status.mode = mission_active_ ?
         SupervisorStatus::FAILSAFE :
         SupervisorStatus::HOLD;
       status.reason = SupervisorStatus::REASON_REQUIRED_HEALTH_FAILED;
       status.command_allowed = false;
-      status.message = failed_health_message;
+      status.message = health_message;
       supervisor_publisher_->publish(status);
       return;
     }
@@ -362,6 +373,7 @@ private:
 
     return age_s <= timeout_s;
   }
+
   bool management_state_fresh() const
   {
     if (!has_management_state_) {
@@ -373,6 +385,51 @@ private:
       static_cast<double>(management_state_timeout_ms_) / 1000.0;
 
     return age_s <= timeout_s;
+  }
+
+  bool required_health_topics_waiting(std::string & message) const
+  {
+    int waiting_count = 0;
+    std::string first_waiting;
+
+    for (const auto & topic : required_health_topics_) {
+      if (planned_inactive_topics_.find(topic) !=
+        planned_inactive_topics_.end())
+      {
+        continue;
+      }
+
+      const auto item = latest_health_by_topic_.find(topic);
+
+      if (item == latest_health_by_topic_.end() ||
+        item->second.status == HealthStatus::UNKNOWN)
+      {
+        ++waiting_count;
+
+        if (first_waiting.empty()) {
+          first_waiting = "waiting for required health topic " + topic;
+        }
+
+        continue;
+      }
+
+      if (item->second.status != HealthStatus::OK) {
+        return false;
+      }
+    }
+
+    if (waiting_count == 0) {
+      return false;
+    }
+
+    if (waiting_count == 1) {
+      message = first_waiting;
+    } else {
+      message =
+        "waiting for " + std::to_string(waiting_count) + " required health topics";
+    }
+
+    return true;
   }
 
   bool required_health_topics_ok(std::string & failure_message) const
@@ -390,16 +447,15 @@ private:
       const auto item = latest_health_by_topic_.find(topic);
 
       if (item == latest_health_by_topic_.end()) {
-        ++failed_count;
-
-        if (first_failure.empty()) {
-          first_failure = "waiting for required health topic " + topic;
-        }
-
         continue;
       }
 
       const auto & health = item->second;
+
+      if (health.status == HealthStatus::UNKNOWN) {
+        continue;
+      }
+
       if (health.status != HealthStatus::OK) {
         ++failed_count;
 

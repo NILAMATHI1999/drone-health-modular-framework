@@ -1,18 +1,19 @@
-  #include <chrono>
-  #include <stdexcept>
-  #include <string>
-  #include <unordered_map>
-  #include <vector>
+#include <chrono>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-  #include "drone_health_interfaces/msg/management_state.hpp"
-  #include "drone_health_interfaces/srv/set_module_inactive.hpp"
-  #include "drone_health_interfaces/srv/register_module.hpp"
-  #include "drone_health_interfaces/srv/deregister_module.hpp"
-  #include "drone_health_interfaces/msg/supervisor_status.hpp"
-  #include "rclcpp/rclcpp.hpp"
-  #include "std_srvs/srv/set_bool.hpp"
-  #include "std_msgs/msg/string.hpp"
-
+#include "drone_health_interfaces/msg/management_state.hpp"
+#include "drone_health_interfaces/srv/set_module_inactive.hpp"
+#include "drone_health_interfaces/srv/register_module.hpp"
+#include "drone_health_interfaces/msg/managed_module.hpp"
+#include "drone_health_interfaces/msg/monitor_spec.hpp"
+#include "drone_health_interfaces/srv/deregister_module.hpp"
+#include "drone_health_interfaces/msg/supervisor_status.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "std_srvs/srv/set_bool.hpp"
+#include "std_msgs/msg/string.hpp"
 
 class ManagementNode : public rclcpp::Node
 {
@@ -45,7 +46,6 @@ public:
         this,
         std::placeholders::_1));
 
-
     maintenance_service_ = create_service<SetBool>(
         "/management/set_maintenance_mode",
         std::bind(
@@ -61,7 +61,6 @@ public:
           this,
           std::placeholders::_1,
           std::placeholders::_2));
-
 
     module_inactive_service_ = create_service<SetModuleInactive>(
         "/management/set_module_inactive",
@@ -86,8 +85,6 @@ public:
         std::placeholders::_1,
         std::placeholders::_2));
 
-
-
     timer_ = create_wall_timer(
         std::chrono::milliseconds(200),
         std::bind(&ManagementNode::publish_state, this));
@@ -100,6 +97,8 @@ private:
   using SetModuleInactive = drone_health_interfaces::srv::SetModuleInactive;
   using RegisterModule = drone_health_interfaces::srv::RegisterModule;
   using DeregisterModule = drone_health_interfaces::srv::DeregisterModule;
+  using ManagedModule = drone_health_interfaces::msg::ManagedModule;
+  using MonitorSpec = drone_health_interfaces::msg::MonitorSpec;
   using SupervisorStatus = drone_health_interfaces::msg::SupervisorStatus;
   using SetBool = std_srvs::srv::SetBool;
 
@@ -107,6 +106,7 @@ private:
   {
     std::string name;
     std::string type;
+    std::string reliability{"reliable"};
     bool is_heartbeat{false};
     int deadline_ms{0};
     int liveliness_ms{0};
@@ -118,9 +118,6 @@ private:
     std::vector<std::string> topics;
     std::vector<TopicConfig> topic_configs;
   };
-
-
-
 
   void handle_set_maintenance_mode(
     const SetBool::Request::SharedPtr request,
@@ -143,7 +140,6 @@ private:
 
     publish_state();
   }
-
 
   void handle_set_mission_active(
     const SetBool::Request::SharedPtr request,
@@ -183,7 +179,6 @@ private:
     publish_state();
   }
 
-
   void handle_set_module_inactive(
     const SetModuleInactive::Request::SharedPtr request,
     SetModuleInactive::Response::SharedPtr response)
@@ -215,7 +210,6 @@ private:
         return;
       }
 
-
       planned_inactive_modules_[request->module_name] = request->reason;
       response->success = true;
       response->message =
@@ -242,44 +236,168 @@ private:
     RegisterModule::Response::SharedPtr response)
   {
     if (request->module_name.empty()) {
-      response->success = false;
-      response->message = "module_name must not be empty";
+      reject_register_module(
+        response,
+        request->module_name,
+        "module_name must not be empty");
+      return;
+    }
+
+    if (!request->monitors.empty()) {
+      ModuleConfig config;
+      config.critical = request->critical;
+
+      int heartbeat_count = 0;
+
+      for (const auto & monitor : request->monitors) {
+        if (monitor.topic_name.empty() || monitor.topic_name.front() != '/') {
+          reject_register_module(
+            response,
+            request->module_name,
+            "monitor topic names must start with /");
+          return;
+        }
+
+        if (topic_already_registered_to_other_module(
+            request->module_name,
+            monitor.topic_name))
+        {
+          reject_register_module(
+            response,
+            request->module_name,
+            "monitor topic already registered: " + monitor.topic_name);
+          return;
+        }
+
+        if (monitor.kind != "heartbeat" && monitor.kind != "data") {
+          reject_register_module(
+            response,
+            request->module_name,
+            "monitor kind must be heartbeat or data");
+          return;
+        }
+
+        if (monitor.message_type.empty()) {
+          reject_register_module(
+            response,
+            request->module_name,
+            "monitor message_type must not be empty");
+          return;
+        }
+
+        if (monitor.reliability != "reliable" &&
+          monitor.reliability != "best_effort")
+        {
+          reject_register_module(
+            response,
+            request->module_name,
+            "monitor reliability must be reliable or best_effort");
+          return;
+        }
+
+        if (monitor.deadline_ms < 0 || monitor.liveliness_ms < 0) {
+          reject_register_module(
+            response,
+            request->module_name,
+            "monitor deadline/liveliness must not be negative");
+          return;
+        }
+
+        if (monitor.kind == "heartbeat") {
+          ++heartbeat_count;
+
+          if (monitor.deadline_ms == 0 && monitor.liveliness_ms == 0) {
+            reject_register_module(
+              response,
+              request->module_name,
+              "heartbeat monitor must provide deadline_ms or liveliness_ms");
+            return;
+          }
+        }
+
+        TopicConfig topic;
+        topic.name = monitor.topic_name;
+        topic.type = monitor.message_type;
+        topic.reliability = monitor.reliability;
+        topic.is_heartbeat = monitor.kind == "heartbeat";
+        topic.deadline_ms = monitor.deadline_ms;
+        topic.liveliness_ms = monitor.liveliness_ms;
+
+        config.topics.push_back(topic.name);
+        config.topic_configs.push_back(topic);
+      }
+
+      if (heartbeat_count != 1) {
+        reject_register_module(
+          response,
+          request->module_name,
+          "exactly one heartbeat monitor is required");
+        return;
+      }
+
+      modules_[request->module_name] = config;
+      planned_inactive_modules_.erase(request->module_name);
+      rejected_modules_.erase(request->module_name);
+
+      response->success = true;
+      response->message = "module registered: " + request->module_name;
+
+      publish_state();
       return;
     }
 
     if (request->heartbeat_topic.empty()) {
-      response->success = false;
-      response->message = "heartbeat_topic must not be empty";
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat_topic must not be empty");
       return;
     }
 
     if (request->heartbeat_type.empty()) {
-      response->success = false;
-      response->message = "heartbeat_type must not be empty";
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat_type must not be empty");
       return;
     }
 
     if (request->heartbeat_topic.front() != '/') {
-      response->success = false;
-      response->message = "heartbeat_topic must start with /";
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat_topic must start with /");
       return;
     }
 
+    if (topic_already_registered_to_other_module(
+        request->module_name,
+        request->heartbeat_topic))
+    {
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat topic already registered: " + request->heartbeat_topic);
+      return;
+    }
 
     if (request->heartbeat_deadline_ms < 0 ||
         request->heartbeat_liveliness_ms < 0)
     {
-      response->success = false;
-      response->message = "heartbeat deadline/liveliness must not be negative";
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat deadline/liveliness must not be negative");
       return;
     }
 
     if (request->heartbeat_deadline_ms == 0 &&
         request->heartbeat_liveliness_ms == 0)
     {
-      response->success = false;
-      response->message =
-        "heartbeat must provide deadline_ms or liveliness_ms";
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat must provide deadline_ms or liveliness_ms");
       return;
     }
 
@@ -287,20 +405,20 @@ private:
         request->heartbeat_liveliness_ms > 0 &&
         request->heartbeat_liveliness_ms <= request->heartbeat_deadline_ms)
     {
-      response->success = false;
-      response->message =
-        "heartbeat liveliness_ms must be greater than deadline_ms when both are set";
+      reject_register_module(
+        response,
+        request->module_name,
+        "heartbeat liveliness_ms must be greater than deadline_ms when both are set");
       return;
     }
-
 
     if (request->data_topics.size() != request->data_topic_types.size()) {
-      response->success = false;
-      response->message = "data_topics and data_topic_types size must match";
+      reject_register_module(
+        response,
+        request->module_name,
+        "data_topics and data_topic_types size must match");
       return;
     }
-
-
 
     ModuleConfig config;
     config.critical = request->critical;
@@ -308,6 +426,7 @@ private:
     TopicConfig heartbeat;
     heartbeat.name = request->heartbeat_topic;
     heartbeat.type = request->heartbeat_type;
+    heartbeat.reliability = "reliable";
     heartbeat.is_heartbeat = true;
     heartbeat.deadline_ms = request->heartbeat_deadline_ms;
     heartbeat.liveliness_ms = request->heartbeat_liveliness_ms;
@@ -317,23 +436,38 @@ private:
 
     for (size_t i = 0; i < request->data_topics.size(); ++i) {
       if (request->data_topics[i].empty() ||
-      request->data_topic_types[i].empty()) {
-        response->success = false;
-        response->message = "data topic names and types must not be empty";
+        request->data_topic_types[i].empty())
+      {
+        reject_register_module(
+          response,
+          request->module_name,
+          "data topic names and types must not be empty");
         return;
       }
 
       if (request->data_topics[i].front() != '/') {
-        response->success = false;
-        response->message = "data topic names must start with /";
+        reject_register_module(
+          response,
+          request->module_name,
+          "data topic names must start with /");
         return;
       }
 
-
+      if (topic_already_registered_to_other_module(
+          request->module_name,
+          request->data_topics[i]))
+      {
+        reject_register_module(
+          response,
+          request->module_name,
+          "data topic already registered: " + request->data_topics[i]);
+        return;
+      }
 
       TopicConfig data_topic;
       data_topic.name = request->data_topics[i];
       data_topic.type = request->data_topic_types[i];
+      data_topic.reliability = "reliable";
       data_topic.is_heartbeat = false;
       data_topic.deadline_ms = 0;
       data_topic.liveliness_ms = 0;
@@ -344,13 +478,13 @@ private:
 
     modules_[request->module_name] = config;
     planned_inactive_modules_.erase(request->module_name);
+    rejected_modules_.erase(request->module_name);
 
     response->success = true;
     response->message = "module registered: " + request->module_name;
 
     publish_state();
   }
-
 
   void handle_deregister_module(
     const DeregisterModule::Request::SharedPtr request,
@@ -400,6 +534,22 @@ private:
            reason == "optional_disabled" ||
            reason == "mission_not_required";
   }
+
+  void reject_register_module(
+    const RegisterModule::Response::SharedPtr response,
+    const std::string & module_name,
+    const std::string & reason)
+  {
+    response->success = false;
+    response->message = reason;
+
+    if (!module_name.empty()) {
+      rejected_modules_[module_name] = reason;
+    }
+
+    publish_state();
+  }
+
   void declare_module_parameters()
   {
     declare_parameter<std::string>(
@@ -414,7 +564,6 @@ private:
         "module_ids",
         std::vector<std::string>{});
   }
-
 
   void read_module_parameters()
   {
@@ -483,6 +632,28 @@ private:
 
     return false;
   }
+
+  bool topic_already_registered_to_other_module(
+    const std::string & module_name,
+    const std::string & topic_name) const
+  {
+    for (const auto & item : modules_) {
+      if (item.first == module_name) {
+        continue;
+      }
+
+      const auto & config = item.second;
+
+      for (const auto & topic : config.topics) {
+        if (topic == topic_name) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   bool has_planned_inactive_critical_item() const
   {
     for (const auto & item : planned_inactive_modules_) {
@@ -530,7 +701,6 @@ private:
            latest_supervisor_status_.command_allowed;
   }
 
-
   void publish_state()
   {
     ManagementState state;
@@ -570,35 +740,44 @@ private:
       }
     }
 
+    // Publish runtime-registered topic metadata for HealthMonitor and dashboard.
+    // YAML modules use the simple module->topics list; runtime modules also fill topic_configs.
+    for (const auto & module_item : modules_) {
+      const auto & module_name = module_item.first;
+      const auto & module = module_item.second;
 
+      ManagedModule managed_module;
+      managed_module.module_name = module_name;
+      managed_module.critical = module.critical;
 
-//That section publishes runtime-registered topic metadata into /management/state.
-  // Publish runtime-registered topic metadata for HealthMonitor and dashboard.
-  // YAML modules use the simple module->topics list; runtime modules also fill topic_configs.
-
-      for (const auto & module_item : modules_) {
-        const auto & module_name = module_item.first;
-        const auto & module = module_item.second;
-
-        state.registry_modules.push_back(module_name);
-
-        if (planned_inactive_modules_.find(module_name) ==
-            planned_inactive_modules_.end())
-        {
-          state.active_modules.push_back(module_name);
-        }
-
-        for (const auto & topic : module.topic_configs) {
-          state.registry_topic_modules.push_back(module_name);
-          state.registry_topics.push_back(topic.name);
-          state.registry_topic_types.push_back(topic.type);
-          state.registry_topic_critical.push_back(module.critical);
-          state.registry_topic_is_heartbeat.push_back(topic.is_heartbeat);
-          state.registry_topic_deadline_ms.push_back(topic.deadline_ms);
-          state.registry_topic_liveliness_ms.push_back(topic.liveliness_ms);
-        }
+      if (planned_inactive_modules_.find(module_name) !=
+        planned_inactive_modules_.end())
+      {
+        managed_module.state = "PLANNED_INACTIVE";
+        managed_module.last_reason = planned_inactive_modules_.at(module_name);
+      } else {
+        managed_module.state = "REGISTERED";
+        managed_module.last_reason = "registered";
       }
 
+      for (const auto & topic : module.topic_configs) {
+        MonitorSpec monitor;
+        monitor.topic_name = topic.name;
+        monitor.kind = topic.is_heartbeat ? "heartbeat" : "data";
+        monitor.message_type = topic.type;
+        monitor.reliability = topic.reliability;
+        monitor.deadline_ms = topic.deadline_ms;
+        monitor.liveliness_ms = topic.liveliness_ms;
+        managed_module.monitors.push_back(monitor);
+      }
+
+      state.managed_modules.push_back(managed_module);
+    }
+
+    for (const auto & item : rejected_modules_) {
+      state.rejected_modules.push_back(item.first);
+      state.rejected_module_reasons.push_back(item.second);
+    }
 
     state.reason = ManagementState::REASON_NONE;
     state.message = "management state normal";
@@ -638,10 +817,10 @@ private:
 
     state_publisher_->publish(state);
   }
+
   bool maintenance_mode_{false};
   bool mission_active_{false};
   int supervisor_status_timeout_ms_;
-
 
   bool has_supervisor_status_{false};
   SupervisorStatus latest_supervisor_status_;
@@ -654,7 +833,7 @@ private:
 
   std::unordered_map<std::string, std::string> planned_inactive_topics_;
   std::unordered_map<std::string, std::string> planned_inactive_modules_;
-
+  std::unordered_map<std::string, std::string> rejected_modules_;
 
   rclcpp::Publisher<ManagementState>::SharedPtr state_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr heartbeat_publisher_;
