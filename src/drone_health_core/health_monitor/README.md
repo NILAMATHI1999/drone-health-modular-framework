@@ -1,112 +1,174 @@
-# health_monitor_node
+# ROS 2 Universal Health Monitor Node
 
-## Purpose
+A configurable, dynamic ROS 2 node that monitors topic health using **DDS QoS events** (deadlines, liveliness) + **software timeouts**, with mission-aware silencing for maintenance modes.
 
-Monitors ROS topic/module health and publishes standardized health status.
+---
 
-HealthMonitor supports both configured monitoring from `health_monitor.yaml` and runtime heartbeat
-monitoring from `/management/state`.
+## 🏗️ Architecture
 
-## Inputs
+```mermaid
+graph TD
+    YAML["📄 YAML Config"] --> Static["Static Monitors<br/>Typed Subscriptions"]
+    Mgmt["/management/state"] --> Dynamic["Runtime Monitors<br/>Generic Subscriptions"]
+    Mgmt --> Inactive["Planned Inactive Filter"]
+    
+    subgraph Core ["Monitoring Engine"]
+        QoS["⚡ QoS Events<br/>Deadline / Liveliness"]
+        Timer["⏱️ 100ms Timer<br/>Software Timeout"]
+    end
+    
+    Static --> QoS & Timer
+    Dynamic --> QoS & Timer
+    QoS & Timer --> Inactive
+    Inactive --> Pub["📊 /health/status"]
+```
 
-- configured topics from `health_monitor.yaml`
-- `/management/state` (`drone_health_interfaces/msg/ManagementState`)
+**Flow**: YAML loads static monitors at startup. `/management/state` adds/removes runtime monitors dynamically. Every monitor is checked via DDS events (instant) + wall timer (fallback). Topics marked `PLANNED_INACTIVE` are silenced.
 
-Configured topic message types currently supported:
+---
 
-- `string`
-- `float32`
-- `twist_stamped`
-- `laser_scan`
-- `image`
-
-## Outputs
-
-- `/health/status` (`drone_health_interfaces/msg/HealthStatus`)
-
-## Parameters
-
-Configured in `health_monitor.yaml`.
-
-Monitor entries use fields such as:
-
-- `node_name`
-- `topic_name`
-- `kind`
-- `message_type`
-- `reliability`
-- `deadline_ms`
-- `liveliness_ms`
-- `timeout_ms`
-
-## Run command
+## 🚀 Quick Start
 
 ```bash
-ros2 run drone_health_core health_monitor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/health_monitor/health_monitor.yaml
+colcon build --packages-select drone_health_monitor
+source install/setup.bash
+ros2 run drone_health_monitor health_monitor_node --ros-args --params-file config.yaml
 ```
 
-## Expected Behavior
+```yaml
+health_monitor_node:
+  ros__parameters:
+    check_period_ms: 100
+    status_publish_period_ms: 1000
+    monitor_ids: [lidar_heartbeat, vehicle_velocity, camera_image]
 
-HealthMonitor creates subscriptions from the YAML configuration and publishes health status for each
-monitored topic.
+    lidar_heartbeat:
+      node_name: lidar_node
+      topic_name: /lidar/heartbeat
+      kind: heartbeat
+      message_type: string
+      reliability: reliable
+      deadline_ms: 300
+      liveliness_ms: 1000
+      timeout_ms: 1500
 
-It can detect:
-
-- deadline missed
-- liveliness lost
-- QoS incompatibility
-- fallback timeout when no recent message is received
-
-Runtime-registered modules are published by ManagementNode through `registry_topic_*` fields.
-Current runtime support dynamically monitors heartbeat topics.
-
-## Planned Inactive Behavior
-
-HealthMonitor listens to `/management/state`.
-
-If ManagementNode marks a topic as planned inactive, HealthMonitor publishes:
-
-```text
-INACTIVE
+    vehicle_velocity:
+      node_name: flow_node
+      topic_name: /vehicle/velocity
+      kind: data
+      message_type: twist_stamped
+      reliability: best_effort
+      deadline_ms: 200
+      timeout_ms: 500
+   
 ```
 
-with reasons such as:
+---
 
-- `MAINTENANCE`
-- `DEREGISTERED`
-- `OPTIONAL_DISABLED`
-- `MISSION_NOT_REQUIRED`
+## 📡 Interfaces
 
-This prevents planned shutdown from appearing as an unexpected failure.
+| | Topic | Type |
+|---|---|---|
+| **Sub** | `/management/state` | `ManagementState` — add/remove monitors, set inactive |
+| **Sub** | `/lidar/heartbeat`, etc. | Various — monitored topics |
+| **Pub** | `/health/status` | `HealthStatus` — OK / STALE / ERROR / INACTIVE / UNKNOWN |
 
-## Failure Behavior
-
-If a monitored topic stops unexpectedly, HealthMonitor reports stale, deadline missed, liveliness
-lost, or timeout depending on the configured checks.
-
-If a topic is planned inactive, HealthMonitor reports inactive instead of failure.
-
-## Ctrl+C vs Deregister
-
-```text
-Ctrl+C / crash / power loss
--> no deregistration request
--> heartbeat stops
--> HealthMonitor reports stale/deadline/liveliness failure
-
-planned deregister
--> ManagementNode marks topic inactive
--> HealthMonitor reports INACTIVE / DEREGISTERED
+```mermaid
+classDiagram
+    class HealthStatus {
+        +string node_name
+        +string topic_name
+        +uint8 status
+        +uint8 reason
+        +string message
+        +float32 last_update_age_s
+    }
+    status : OK=0, STALE=1, ERROR=2, INACTIVE=3, UNKNOWN=4
+    reason : HEARTBEAT_TIMEOUT=1, DEADLINE_MISSED=3, LIVELINESS_LOST=4, MAINTENANCE=10
 ```
 
-## Current Limitation
+---
 
-Runtime data topics are registered as metadata but are not generically monitored yet.
+## 🌟 Why It's Reusable
 
-```text
-YAML topics = full configured monitoring
-runtime topics = heartbeat monitoring only
+| Feature | Benefit |
+|---|---|
+| **YAML-only config** | Add sensors by editing config — zero code changes |
+| **Generic subscriptions** | Runtime monitors work with *any* message type without recompiling |
+| **Mission-aware** | Silences alerts during maintenance via `/management/state` |
+| **Dual fault detection** | DDS QoS events (ms) + software timer (100ms) backup |
+
+```mermaid
+graph LR
+    User["Edit YAML"] --> Node["Auto-creates<br/>Subscriptions + QoS"]
+    Node --> Monitor1["lidar"]
+    Node --> Monitor2["camera"]
+    Node --> Monitor3["velocity"]
+    Mgmt["/management/state"] -.->|Add/Remove| Node
 ```
 
-Future work can add generic serialized-message monitoring or additional supported message-type
-handlers for runtime data topics.
+---
+
+## 🔄 Runtime Monitor Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Registered: Mgmt command
+    Registered --> Active: Subscribe OK
+    Active --> Active: Msg received
+    Active --> Stale: Timeout
+    Stale --> Active: Msg received
+    Active --> [*]: Remove command
+```
+
+External modules publish `ManagementState` with monitor specs → node spawns `rclcpp::GenericSubscription` on the fly.
+
+---
+
+## 📊 Status Codes
+
+| Code | Meaning | Trigger |
+|---|---|---|
+| `0` OK | Healthy | Message received within deadline |
+| `1` STALE | Timeout | No message for `timeout_ms` |
+| `2` ERROR | QoS/Liveliness issue | DDS event fired |
+| `3` INACTIVE | Planned silence | Topic in `planned_inactive_topics` |
+| `4` UNKNOWN | First message pending | No data yet |
+
+---
+
+## 🛠️ Build & Run
+
+```bash
+# Build
+colcon build --packages-select drone_health_monitor
+source install/setup.bash
+
+# Run
+ros2 run drone_health_monitor health_monitor_node --ros-args --params-file config.yaml
+
+# Debug
+ros2 topic echo /health/status
+ros2 param list /health_monitor_node
+```
+
+---
+
+## 📦 Dependencies
+
+```mermaid
+graph LR
+    Node["health_monitor_node"]
+    Node --> drone_health_interfaces
+    Node --> rclcpp
+    Node --> std_msgs
+    Node --> geometry_msgs
+    Node --> sensor_msgs
+```
+
+---
+
+## 📄 License
+
+MIT License. Free to use for academic and commercial projects.
+```

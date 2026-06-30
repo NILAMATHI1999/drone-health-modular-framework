@@ -1,79 +1,154 @@
 # drone_health_interfaces
 
-ROS 2 interface package for the drone health monitoring framework.
+A shared ROS 2 interface package containing all custom messages and services used throughout the Drone Health Monitoring Framework. It provides a common communication layer between the Management, Health Monitor, Supervisor, Safety Fusion, Dashboard, and any runtime-registrable modules.
 
-## Purpose
+---
 
-This package contains shared messages and services used by the health monitor, safety fusion,
-supervisor, management node, dashboard bridge, examples, and registrable template nodes.
+## 🏗️ Architecture
 
-## Messages
+```mermaid
+graph LR
+    MGMT["🎛️ Management Node"] -->|ManagementState| HM["🏥 Health Monitor"]
+    MGMT -->|ManagementState| SUP["🧠 Supervisor"]
 
-- `msg/HealthStatus.msg`
-- `msg/SafetyStatus.msg`
-- `msg/SupervisorStatus.msg`
-- `msg/ManagementState.msg`
+    HM -->|HealthStatus| SUP
+    SAFE["🛡️ Safety Fusion"] -->|SafetyStatus| SUP
 
-## Services
+    SUP -->|SupervisorStatus| AUTO["🚁 Mission / Autonomy"]
 
-- `srv/SetModuleInactive.srv`
-- `srv/RegisterModule.srv`
-- `srv/DeregisterModule.srv`
-
-## Runtime Registry Fields
-
-`ManagementState.msg` includes runtime registry fields used by ManagementNode, HealthMonitor, and
-the dashboard.
-
-Meaning:
-
-```text
-registry_* = known module/topic metadata in the current runtime
-active_* = currently active / expected online
-planned_inactive_* = intentionally inactive
+    MODULE["🔌 Runtime Module"] -->|RegisterModule / DeregisterModule| MGMT
+    MODULE -->|SetModuleInactive| MGMT
 ```
 
-Important fields:
+**Flow:** Every package communicates using the interfaces defined here. No package depends on another package's implementation—only on these shared message and service definitions.
 
-```text
-registry_modules
-active_modules
+---
 
-planned_inactive_modules
-planned_inactive_module_reasons
-planned_inactive_topics
-planned_inactive_topic_reasons
+## 📨 Messages
 
-registry_topic_modules
-registry_topics
-registry_topic_types
-registry_topic_critical
-registry_topic_is_heartbeat
-registry_topic_deadline_ms
-registry_topic_liveliness_ms
+| Message | Purpose |
+|---------|---------|
+| `HealthStatus.msg` | Reports the health of an individual monitored topic. |
+| `SafetyStatus.msg` | Reports the safety decision from the Safety Fusion node. |
+| `SupervisorStatus.msg` | Publishes the final system mode and command permission. |
+| `ManagementState.msg` | Publishes mission state, module registry, and planned inactive information. |
+| `ManagedModule.msg` | Describes a registered module and its monitoring configuration. |
+| `MonitorSpec.msg` | Describes a monitored topic including QoS requirements. |
+
+```mermaid
+classDiagram
+    class ManagementState
+    class ManagedModule
+    class MonitorSpec
+    class HealthStatus
+    class SafetyStatus
+    class SupervisorStatus
+
+    ManagementState --> ManagedModule
+    ManagedModule --> MonitorSpec
 ```
 
-Runtime heartbeat monitoring uses:
+---
 
-```text
-registry_topic_is_heartbeat = true
-registry_topic_types = std_msgs/msg/String
+## 🔧 Services
+
+| Service | Purpose |
+|---------|---------|
+| `RegisterModule.srv` | Register a module while the system is running. |
+| `DeregisterModule.srv` | Gracefully remove a module from the runtime registry. |
+| `SetModuleInactive.srv` | Mark a module as intentionally inactive. |
+
+These services allow modules to join or leave the framework without restarting the system.
+
+---
+
+## 📊 Runtime Registry
+
+`ManagementState.msg` acts as the runtime registry for the entire framework.
+
+It contains:
+
+- Current mission state
+- Maintenance mode
+- Registered modules
+- Topic monitoring configuration
+- Planned inactive modules
+- Planned inactive topics
+- Reasons for inactive modules/topics
+- Rejected module registrations
+
+The runtime registry allows the Health Monitor and Supervisor to automatically adapt as modules are added or removed.
+
+```mermaid
+graph LR
+    Register["RegisterModule"] --> Registry["ManagementState"]
+    Deregister["DeregisterModule"] --> Registry
+    Registry --> Health["Health Monitor"]
+    Registry --> Supervisor["Supervisor"]
 ```
 
-Data topics may be listed in the registry, but generic runtime data-topic monitoring is future work.
+---
 
-## Build
+## 🌟 Why This Package Exists
 
-Place this package inside a ROS 2 workspace `src/` folder:
+| Feature | Benefit |
+|---------|---------|
+| Shared interfaces | Every package communicates using identical message definitions. |
+| Decoupled architecture | Nodes depend only on interfaces, not implementations. |
+| Runtime extensibility | New modules can register without recompiling other packages. |
+| Strong typing | Compile-time validation of all framework communications. |
+| Reusable | Can be reused by future robots or projects without modification. |
+
+---
+
+## 📦 Package Contents
+
+```
+drone_health_interfaces/
+├── msg/
+│   ├── HealthStatus.msg
+│   ├── SafetyStatus.msg
+│   ├── SupervisorStatus.msg
+│   ├── ManagementState.msg
+│   ├── ManagedModule.msg
+│   └── MonitorSpec.msg
+├── srv/
+│   ├── RegisterModule.srv
+│   ├── DeregisterModule.srv
+│   └── SetModuleInactive.srv
+├── CMakeLists.txt
+├── package.xml
+└── README.md
+```
+
+---
+
+## 🚀 Build
 
 ```bash
 colcon build --packages-select drone_health_interfaces
+source install/setup.bash
 ```
 
-## Used By
+---
 
-- `drone_health_core`
-- `drone_health_safety_example`
-- `drone_health_dashboard`
-- `drone_health_examples`
-- `drone_health_registrable_template`
+## 📦 Used By
+
+```mermaid
+graph TD
+    Interfaces["drone_health_interfaces"]
+
+    Interfaces --> Core["drone_health_core"]
+    Interfaces --> Safety["safety_fusion_pkg"]
+    Interfaces --> Dashboard["dashboard"]
+    Interfaces --> Examples["examples"]
+    Interfaces --> Registrable["registrable modules"]
+```
+
+The package is intended to be the single source of truth for all custom ROS 2 interfaces used throughout the framework.
+
+---
+
+## 📄 License
+
+MIT License. Free to use for academic and commercial projects.
