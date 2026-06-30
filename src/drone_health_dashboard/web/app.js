@@ -93,33 +93,32 @@ function renderKnownModules(management) {
     return;
   }
 
+  if (management.reason === "STALE") {
+    element.innerHTML = '<p class="health-meta stale-text">STALE</p>';
+    return;
+  }
+
   const modules = management.managed_modules || [];
   if (!modules.length) {
     element.innerHTML = '<p class="health-meta">No registered modules.</p>';
     return;
   }
 
-  element.innerHTML = modules.map(module => {
-    const state = module.state || "UNKNOWN";
-    const reason = module.last_reason || "";
-    const monitors = module.monitors ? module.monitors.length : 0;
-    const critical = module.critical ? "critical" : "optional";
-
-    return `
-      <div class="module-pill ${state === "PLANNED_INACTIVE" ? "inactive" : ""}">
-        <span>${module.module_name || "unknown_module"}</span>
-        <strong>${state}</strong>
-        <em>${critical}</em>
-        <em>${monitors} monitors</em>
-        <em>${reason}</em>
-      </div>
-    `;
-  }).join("");
+  element.innerHTML = modules.map(module => `
+    <div class="module-pill">
+      <span>${module.module_name || "unknown_module"}</span>
+    </div>
+  `).join("");
 }
 
 function renderRejected(management) {
   const element = document.getElementById("rejectedList");
   if (!element) {
+    return;
+  }
+
+  if (management.reason === "STALE") {
+    element.innerHTML = '<p class="health-meta stale-text">STALE</p>';
     return;
   }
 
@@ -141,17 +140,27 @@ function renderRejected(management) {
 
 function renderManagement(data) {
   const management = data.management || {};
+  const managementStale = management.reason === "STALE";
 
-  document.getElementById("missionActiveText").textContent =
-    String(Boolean(management.mission_active));
-  document.getElementById("maintenanceModeText").textContent =
-    String(Boolean(management.maintenance_mode));
+  document.getElementById("missionActiveText").textContent = managementStale
+    ? "STALE"
+    : String(Boolean(management.mission_active));
+  document.getElementById("maintenanceModeText").textContent = managementStale
+    ? "STALE"
+    : String(Boolean(management.maintenance_mode));
   document.getElementById("managementReasonText").textContent =
     management.reason || "NO_DATA";
   document.getElementById("managementMessage").textContent =
     management.message || "No management data";
 
   const inactiveList = document.getElementById("inactiveList");
+  if (managementStale) {
+    inactiveList.innerHTML = '<p class="health-meta stale-text">STALE</p>';
+    renderKnownModules(management);
+    renderRejected(management);
+    return;
+  }
+
   const modules = management.planned_inactive_modules || [];
   const moduleReasons = management.planned_inactive_module_reasons || [];
   if (modules.length === 0) {
@@ -233,9 +242,17 @@ events.onerror = () => {
   setCardColor("commandCard", "gray");
 
 
+  document.getElementById("missionActiveText").textContent = "STALE";
+  document.getElementById("maintenanceModeText").textContent = "STALE";
   document.getElementById("managementReasonText").textContent = "STALE";
   document.getElementById("managementMessage").textContent =
     "dashboard bridge is not connected";
+  document.getElementById("inactiveList").innerHTML =
+    '<p class="health-meta stale-text">DASHBOARD DISCONNECTED</p>';
+  document.getElementById("knownModulesList").innerHTML =
+    '<p class="health-meta stale-text">DASHBOARD DISCONNECTED</p>';
+  document.getElementById("rejectedList").innerHTML =
+    '<p class="health-meta stale-text">DASHBOARD DISCONNECTED</p>';
 
   const healthTiles = document.querySelectorAll(".health-tile");
   if (healthTiles.length === 0) {

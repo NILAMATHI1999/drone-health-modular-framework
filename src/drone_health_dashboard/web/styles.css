@@ -26,9 +26,9 @@
   }
 
   .shell {
-    width: min(1200px, calc(100% - 32px));
+    width: min(1520px, calc(100% - 16px));
     margin: 0 auto;
-    padding: 24px 0 32px;
+    padding: 12px 0 18px;
   }
 
   .topbar {
@@ -36,7 +36,7 @@
     justify-content: space-between;
     gap: 16px;
     align-items: flex-start;
-    margin-bottom: 18px;
+    margin-bottom: 8px;
   }
 
   h1,
@@ -46,7 +46,7 @@
   }
 
   h1 {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 750;
   }
 
@@ -92,7 +92,7 @@
 
   .eyebrow {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
   }
@@ -135,14 +135,14 @@
 
   .metric-label {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
   }
 
   .metric-value {
     font-size: 25px;
     font-weight: 750;
-    margin-top: 6px;
+    margin-top: 4px;
   }
 
   .metric-unit {
@@ -177,7 +177,7 @@
 
   .panel-heading span {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .health-grid {
@@ -198,13 +198,13 @@
 
   .health-meta {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     margin-top: 4px;
     overflow-wrap: anywhere;
   }
 
   .health-status {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
     margin-top: 8px;
   }
@@ -215,7 +215,7 @@
   }
 
   .event-row {
-    padding: 10px;
+    padding: 8px;
     border-left-width: 6px;
     display: grid;
     gap: 4px;
@@ -244,149 +244,6 @@
   }
 
 
-
-.mission-scene {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.scene-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.scene-header h2 {
-  font-size: 20px;
-}
-
-.scene-header p {
-  margin-top: 4px;
-  color: var(--muted);
-}
-
-.mission-badge {
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 750;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.mission-badge.idle {
-  background: var(--gray-bg);
-  color: #344054;
-}
-
-.mission-badge.active {
-  background: var(--green-bg);
-  color: var(--green);
-}
-
-.mission-badge.hold {
-  background: var(--yellow-bg);
-  color: var(--yellow);
-}
-
-.mission-badge.failsafe,
-.mission-badge.emergency {
-  background: var(--red-bg);
-  color: var(--red);
-}
-
-.scene-area {
-  position: relative;
-  height: 180px;
-  margin-top: 16px;
-  border: 1px solid #e2e7ef;
-  border-radius: 8px;
-  background: linear-gradient(#f8fbff 0 70%, #eef3ea 70% 100%);
-  overflow: hidden;
-}
-
-.base-station {
-  position: absolute;
-  left: 24px;
-  bottom: 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #3b4454;
-  font-weight: 650;
-}
-
-.base-icon {
-  font-size: 28px;
-}
-
-.drone-visual {
-  position: absolute;
-  transition: 0.4s ease;
-}
-
-.drone-icon {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 2px solid #2f6fed;
-  color: #2f6fed;
-  font-size: 28px;
-  box-shadow: 0 8px 20px rgba(31, 42, 68, 0.16);
-}
-
-.drone-visual.grounded {
-  left: 84px;
-  bottom: 26px;
-}
-
-.drone-visual.flying {
-  left: 52%;
-  top: 38px;
-}
-
-.drone-visual.returning {
-  left: 32%;
-  top: 70px;
-}
-
-.drone-visual.hold {
-  left: 48%;
-  top: 72px;
-}
-
-.drone-visual.emergency {
-  left: 52%;
-  top: 92px;
-}
-
-.drone-visual.returning .drone-icon,
-.drone-visual.emergency .drone-icon {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-.scene-warning {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  background: var(--red-bg);
-  color: var(--red);
-  border: 1px solid #f5b5b5;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-weight: 750;
-}
-
-.hidden {
-  display: none;
-}
 
 #managementCard,
 #inactiveCard {
@@ -438,10 +295,6 @@
 }
 
 @media (max-width: 860px) {
-  .scene-header {
-    flex-direction: column;
-  }
-
   .inactive-item {
     grid-template-columns: 1fr;
   }
@@ -450,25 +303,25 @@
 
 /* Compact operator layout */
 .status-grid {
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .status-card {
-  padding: 10px 12px;
-  min-height: 92px;
+  padding: 7px 10px;
+  min-height: 70px;
   border-left-width: 6px;
 }
 
 .status-card h2 {
-  font-size: 22px;
-  margin: 5px 0;
+  font-size: 18px;
+  margin: 3px 0;
 }
 
 .status-card h3 {
-  font-size: 15px;
-  margin: 0 0 6px;
+  font-size: 14px;
+  margin: 0 0 4px;
 }
 
 .eyebrow {
@@ -477,80 +330,14 @@
 
 .message,
 .status-card p {
-  font-size: 13px;
-}
-
-.mission-scene {
-  padding: 12px;
-  margin-bottom: 10px;
-}
-
-.scene-header h2 {
-  font-size: 17px;
-}
-
-.scene-header p {
-  font-size: 13px;
-}
-
-.scene-area {
-  height: 112px;
-  margin-top: 10px;
-}
-
-.base-station {
-  left: 18px;
-  bottom: 10px;
-  font-size: 12px;
-}
-
-.base-icon {
-  font-size: 22px;
-}
-
-.drone-icon {
-  width: 34px;
-  height: 34px;
-  font-size: 21px;
-}
-
-.drone-visual.grounded {
-  left: 66px;
-  bottom: 18px;
-}
-
-.drone-visual.flying {
-  left: 52%;
-  top: 24px;
-}
-
-.drone-visual.returning {
-  left: 34%;
-  top: 42px;
-}
-
-.drone-visual.hold {
-  left: 48%;
-  top: 42px;
-}
-
-.drone-visual.emergency {
-  left: 52%;
-  top: 52px;
-}
-
-.scene-warning {
-  right: 10px;
-  bottom: 10px;
-  padding: 6px 8px;
   font-size: 12px;
 }
 
 .management-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(210px, 0.9fr) minmax(360px, 1.45fr) minmax(240px, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .compact-card {
@@ -558,19 +345,19 @@
 }
 
 .status-row {
-  padding: 4px 0;
-  font-size: 13px;
+  padding: 3px 0;
+  font-size: 12px;
 }
 
 #managementMessage {
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 12px;
 }
 
 .inactive-list {
   gap: 5px;
-  margin-top: 6px;
-  max-height: 150px;
+  margin-top: 4px;
+  max-height: 118px;
   overflow: auto;
 }
 
@@ -582,13 +369,13 @@
 }
 
 .metrics-grid {
-  grid-template-columns: repeat(4, minmax(130px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .metric-card {
-  padding: 9px 10px;
+  padding: 7px 9px;
 }
 
 .metric-label {
@@ -596,8 +383,8 @@
 }
 
 .metric-value {
-  font-size: 20px;
-  margin-top: 3px;
+  font-size: 16px;
+  margin-top: 2px;
 }
 
 .content-grid {
@@ -606,7 +393,7 @@
 }
 
 .panel {
-  padding: 10px;
+  padding: 8px;
 }
 
 .panel-heading {
@@ -619,17 +406,17 @@
 }
 
 .health-grid {
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 7px;
 }
 
 .health-tile {
-  padding: 8px;
+  padding: 7px;
   border-left-width: 5px;
 }
 
 .health-title {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .health-meta {
@@ -656,19 +443,20 @@
 }
 
 .module-list {
-  display: grid;
-  gap: 5px;
-  max-height: 150px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  max-height: 118px;
   overflow: auto;
 }
 
 .module-pill {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto minmax(70px, auto);
-  gap: 8px;
-  align-items: center;
-  padding: 5px 7px;
-  border-radius: 6px;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 5px;
+  border-radius: 4px;
   background: #f4f6f8;
   font-size: 12px;
 }
@@ -677,24 +465,14 @@
   overflow-wrap: anywhere;
 }
 
-.module-pill strong {
-  font-size: 11px;
-  color: var(--green);
+.module-pill {
+  background: var(--green-bg);
+  border: 1px solid #b9e4c8;
+  line-height: 1.15;
 }
 
-.module-pill em {
-  font-style: normal;
-  color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
+.stale-text {
+  color: var(--red);
+  font-weight: 800;
 }
 
-.module-pill.inactive strong {
-  color: #667085;
-}
-
-@media (max-width: 760px) {
-  .module-pill {
-    grid-template-columns: 1fr;
-  }
-}
