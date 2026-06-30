@@ -77,6 +77,91 @@
       </section>
     </section>
 
+    <section class="panel network-panel">
+      <div class="panel-heading">
+        <h2>Network Details</h2>
+        <span id="networkStatusText">NO_DATA</span>
+      </div>
+
+      <div class="network-tabs" role="tablist" aria-label="Network details">
+        <button class="network-tab active" type="button" data-network-tab="overall">Overall</button>
+        <button class="network-tab" type="button" data-network-tab="wifi">Wi-Fi</button>
+        <button class="network-tab" type="button" data-network-tab="lte">LTE</button>
+        <button class="network-tab" type="button" data-network-tab="at">AT Summary</button>
+      </div>
+
+      <div class="network-tab-panels">
+        <section class="network-tab-panel active" data-network-panel="overall">
+          <div class="status-row">
+            <span>Status</span>
+            <strong id="networkStatus">NO_DATA</strong>
+          </div>
+          <div class="status-row">
+            <span>Reason</span>
+            <strong id="networkReason">NO_DATA</strong>
+          </div>
+        </section>
+
+        <section class="network-tab-panel" data-network-panel="wifi">
+          <div class="status-row">
+            <span>State</span>
+            <strong id="wifiState">NO_DATA</strong>
+          </div>
+          <div class="status-row">
+            <span>SSID</span>
+            <strong id="wifiSsid">--</strong>
+          </div>
+          <div class="status-row">
+            <span>Available</span>
+            <strong id="wifiAvailableSsids">--</strong>
+          </div>
+          <div class="status-row">
+            <span>Signal</span>
+            <strong id="wifiSignalBars">--</strong>
+          </div>
+          <div class="status-row">
+            <span>Speed</span>
+            <strong id="wifiSpeed">--</strong>
+          </div>
+        </section>
+
+        <section class="network-tab-panel" data-network-panel="lte">
+          <div class="status-row">
+            <span>State</span>
+            <strong id="lteState">NO_DATA</strong>
+          </div>
+          <div class="status-row">
+            <span>Operator</span>
+            <strong id="lteOperator">--</strong>
+          </div>
+          <div class="status-row">
+            <span>RAT</span>
+            <strong id="lteRat">--</strong>
+          </div>
+          <div class="status-row">
+            <span>RSSI</span>
+            <strong id="lteRssi">--</strong>
+          </div>
+          <div class="status-row">
+            <span>RSRP</span>
+            <strong id="lteRsrp">--</strong>
+          </div>
+          <div class="status-row">
+            <span>RSRQ</span>
+            <strong id="lteRsrq">--</strong>
+          </div>
+          <div class="status-row">
+            <span>SINR</span>
+            <strong id="lteSinr">--</strong>
+          </div>
+        </section>
+
+        <section class="network-tab-panel" data-network-panel="at">
+          <p id="atSummary">--</p>
+        </section>
+      </div>
+    </section>
+
     <section class="metrics-grid" id="metricsGrid"></section>
 
     <section class="content-grid">

@@ -10,6 +10,7 @@
         - health
         - supervisor
         - camera
+        - network
 
       lidar.critical: true
       lidar.topics:
@@ -41,4 +42,16 @@
       camera.topics:
         - /camera/image_raw
         - /camera/heartbeat
+
+      network.critical: false
+      network.topics:
+        - /network/wifi/state
+        - /network/wifi/heartbeat
+        - /network/lte/state
+        - /network/lte/heartbeat
+        - /network_status
+        - /network_reason
+        - /network/heartbeat
+        - /network/at_hilink/heartbeat
+        - /network/at_lte/heartbeat
 

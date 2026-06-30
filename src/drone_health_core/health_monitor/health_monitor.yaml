@@ -15,6 +15,11 @@ health_monitor_node:
         - camera_image
         - camera_heartbeat
         - management_heartbeat
+        - wifi_heartbeat
+        - lte_heartbeat
+        - network_heartbeat
+        - at_hilink_heartbeat
+        - at_modem_heartbeat
 
 
 
@@ -115,6 +120,51 @@ health_monitor_node:
       management_heartbeat.deadline_ms: 700
       management_heartbeat.liveliness_ms: 1500
       management_heartbeat.timeout_ms: 2000
+
+      wifi_heartbeat.node_name: wifi_monitor_node
+      wifi_heartbeat.topic_name: /network/wifi/heartbeat
+      wifi_heartbeat.kind: heartbeat
+      wifi_heartbeat.message_type: string
+      wifi_heartbeat.reliability: reliable
+      wifi_heartbeat.deadline_ms: 5000
+      wifi_heartbeat.liveliness_ms: 8000
+      wifi_heartbeat.timeout_ms: 10000
+
+      lte_heartbeat.node_name: lte_monitor_node
+      lte_heartbeat.topic_name: /network/lte/heartbeat
+      lte_heartbeat.kind: heartbeat
+      lte_heartbeat.message_type: string
+      lte_heartbeat.reliability: reliable
+      lte_heartbeat.deadline_ms: 2500
+      lte_heartbeat.liveliness_ms: 5000
+      lte_heartbeat.timeout_ms: 7000
+
+      network_heartbeat.node_name: network_fusion_node
+      network_heartbeat.topic_name: /network/heartbeat
+      network_heartbeat.kind: heartbeat
+      network_heartbeat.message_type: string
+      network_heartbeat.reliability: reliable
+      network_heartbeat.deadline_ms: 5000
+      network_heartbeat.liveliness_ms: 8000
+      network_heartbeat.timeout_ms: 10000
+
+      at_hilink_heartbeat.node_name: at_hilink_adapter_node
+      at_hilink_heartbeat.topic_name: /network/at_hilink/heartbeat
+      at_hilink_heartbeat.kind: heartbeat
+      at_hilink_heartbeat.message_type: string
+      at_hilink_heartbeat.reliability: reliable
+      at_hilink_heartbeat.deadline_ms: 2500
+      at_hilink_heartbeat.liveliness_ms: 5000
+      at_hilink_heartbeat.timeout_ms: 7000
+
+      at_modem_heartbeat.node_name: at_modem_monitor_node
+      at_modem_heartbeat.topic_name: /network/at_lte/heartbeat
+      at_modem_heartbeat.kind: heartbeat
+      at_modem_heartbeat.message_type: string
+      at_modem_heartbeat.reliability: reliable
+      at_modem_heartbeat.deadline_ms: 2500
+      at_modem_heartbeat.liveliness_ms: 5000
+      at_modem_heartbeat.timeout_ms: 7000
 
 
 

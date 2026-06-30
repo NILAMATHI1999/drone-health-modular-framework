@@ -23,6 +23,22 @@ function valueText(value) {
   return value;
 }
 
+function setupNetworkTabs() {
+  document.querySelectorAll(".network-tab").forEach(button => {
+    button.addEventListener("click", () => {
+      const tab = button.dataset.networkTab;
+
+      document.querySelectorAll(".network-tab").forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
+
+      document.querySelectorAll(".network-tab-panel").forEach(panel => {
+        panel.classList.toggle("active", panel.dataset.networkPanel === tab);
+      });
+    });
+  });
+}
+
 function renderMetrics(data) {
   const grid = document.getElementById("metricsGrid");
   const safety = data.safety || {};
@@ -138,6 +154,56 @@ function renderRejected(management) {
   `).join("");
 }
 
+function signalBarsMarkup(value) {
+  if (value === null || value === undefined || value < 0) {
+    return "--";
+  }
+
+  const bars = Math.max(0, Math.min(4, Number(value)));
+  return [1, 2, 3, 4].map(level =>
+    `<span class="signal-bar ${level <= bars ? "active" : ""}"></span>`
+  ).join("");
+}
+
+function renderNetwork(data) {
+  const network = data.network || {};
+
+  document.getElementById("networkStatusText").textContent =
+    network.status || "NO_DATA";
+  document.getElementById("networkStatus").textContent =
+    network.status || "NO_DATA";
+  document.getElementById("networkReason").textContent =
+    network.reason || "NO_DATA";
+  document.getElementById("wifiState").textContent =
+    network.wifi_state || "NO_DATA";
+  document.getElementById("wifiSsid").textContent =
+    network.wifi_ssid || "--";
+  document.getElementById("wifiAvailableSsids").textContent =
+    network.wifi_available_ssids || "--";
+  document.getElementById("wifiSignalBars").innerHTML =
+    signalBarsMarkup(network.wifi_signal_bars);
+  document.getElementById("wifiSpeed").textContent =
+    network.wifi_speed_mbps === null || network.wifi_speed_mbps === undefined
+      ? "--"
+      : `${network.wifi_speed_mbps} Mbps`;
+  document.getElementById("lteState").textContent =
+    network.lte_state || "NO_DATA";
+  document.getElementById("lteOperator").textContent =
+    network.lte_operator || "--";
+  document.getElementById("lteRat").textContent =
+    network.lte_rat || "--";
+  document.getElementById("lteRssi").textContent =
+    network.lte_rssi || "--";
+  document.getElementById("lteRsrp").textContent =
+    network.lte_rsrp || "--";
+  document.getElementById("lteRsrq").textContent =
+    network.lte_rsrq || "--";
+  document.getElementById("lteSinr").textContent =
+    network.lte_sinr || "--";
+  document.getElementById("atSummary").textContent =
+    network.at_summary || "--";
+}
+
 function renderManagement(data) {
   const management = data.management || {};
   const managementStale = management.reason === "STALE";
@@ -209,10 +275,13 @@ function render(data) {
   setCardColor("commandCard", commandAllowed ? "green" : "red");
 
   renderManagement(data);
+  renderNetwork(data);
   renderMetrics(data);
   renderHealth(data);
   renderEvents(data);
 }
+
+setupNetworkTabs();
 
 const events = new EventSource("/events");
 
@@ -253,6 +322,11 @@ events.onerror = () => {
     '<p class="health-meta stale-text">DASHBOARD DISCONNECTED</p>';
   document.getElementById("rejectedList").innerHTML =
     '<p class="health-meta stale-text">DASHBOARD DISCONNECTED</p>';
+
+  document.getElementById("networkStatusText").textContent = "STALE";
+  document.getElementById("networkStatus").textContent = "STALE";
+  document.getElementById("networkReason").textContent =
+    "dashboard bridge is not connected";
 
   const healthTiles = document.querySelectorAll(".health-tile");
   if (healthTiles.length === 0) {

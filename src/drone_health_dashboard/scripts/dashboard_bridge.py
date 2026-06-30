@@ -18,7 +18,7 @@ from drone_health_interfaces.msg import (
 from geometry_msgs.msg import TwistStamped
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Int32, String
 
 
 class DashboardBridgeNode(Node):
@@ -66,6 +66,23 @@ class DashboardBridgeNode(Node):
                 "velocity_y_mps": None,
                 "velocity_z_mps": None,
             },
+            "network": {
+                "status": "NO_DATA",
+                "reason": "NO_DATA",
+                "wifi_state": "NO_DATA",
+                "wifi_ssid": "--",
+                "wifi_available_ssids": "--",
+                "wifi_signal_bars": None,
+                "wifi_speed_mbps": None,
+                "lte_state": "NO_DATA",
+                "lte_operator": "--",
+                "lte_rat": "--",
+                "lte_rssi": "--",
+                "lte_rsrp": "--",
+                "lte_rsrq": "--",
+                "lte_sinr": "--",
+                "at_summary": "--",
+            },
             "health": {},
             "events": [],
             "health_stale_event_sent": False,
@@ -76,6 +93,7 @@ class DashboardBridgeNode(Node):
                 "management": None,
                 "nearest_obstacle": None,
                 "velocity": None,
+                "network": None,
 
             },
         }
@@ -107,6 +125,21 @@ class DashboardBridgeNode(Node):
             self.handle_velocity,
             velocity_qos,
         )
+        self.create_subscription(String, "/network_status", self.handle_network_status, 10)
+        self.create_subscription(String, "/network_reason", self.handle_network_reason, 10)
+        self.create_subscription(String, "/network/wifi/state", self.handle_wifi_state, 10)
+        self.create_subscription(String, "/network/wifi/connected_ssid", self.handle_wifi_ssid, 10)
+        self.create_subscription(String, "/network/wifi/available_ssids", self.handle_wifi_available, 10)
+        self.create_subscription(Int32, "/network/wifi/signal_bars", self.handle_wifi_signal_bars, 10)
+        self.create_subscription(Int32, "/network/wifi/link_speed_mbps", self.handle_wifi_speed, 10)
+        self.create_subscription(String, "/network/lte/state", self.handle_lte_state, 10)
+        self.create_subscription(String, "/network/lte/operator", self.handle_lte_operator, 10)
+        self.create_subscription(String, "/network/lte/rat", self.handle_lte_rat, 10)
+        self.create_subscription(String, "/network/lte/rssi_dbm", self.handle_lte_rssi, 10)
+        self.create_subscription(String, "/network/lte/rsrp_dbm", self.handle_lte_rsrp, 10)
+        self.create_subscription(String, "/network/lte/rsrq_db", self.handle_lte_rsrq, 10)
+        self.create_subscription(String, "/network/lte/sinr_db", self.handle_lte_sinr, 10)
+        self.create_subscription(String, "/network/at_hilink/at_summary", self.handle_at_summary, 10)
 
         self.web_root = Path(get_package_share_directory("drone_health_dashboard")) / "web"
         self.httpd = self.make_server()
@@ -180,6 +213,7 @@ class DashboardBridgeNode(Node):
         management_seen = snapshot["last_seen"].get("management")
         nearest_seen = snapshot["last_seen"].get("nearest_obstacle")
         velocity_seen = snapshot["last_seen"].get("velocity")
+        network_seen = snapshot["last_seen"].get("network")
 
         if supervisor_seen is None:
             snapshot["supervisor"] = {
@@ -245,6 +279,13 @@ class DashboardBridgeNode(Node):
             snapshot["metrics"]["velocity_x_mps"] = None
             snapshot["metrics"]["velocity_y_mps"] = None
             snapshot["metrics"]["velocity_z_mps"] = None
+
+        if network_seen is None:
+            snapshot["network"]["status"] = "NO_DATA"
+            snapshot["network"]["reason"] = "waiting for network status"
+        elif now - network_seen > 3.0:
+            snapshot["network"]["status"] = "STALE"
+            snapshot["network"]["reason"] = "network data is not updating"
 
         if health_seen is not None and now - health_seen > 2.0:
             for item in snapshot["health"].values():
@@ -415,6 +456,56 @@ class DashboardBridgeNode(Node):
             self.state["metrics"]["velocity_y_mps"] = self.safe_number(linear.y)
             self.state["metrics"]["velocity_z_mps"] = self.safe_number(linear.z)
 
+    def set_network_value(self, key, value):
+        with self.lock:
+            self.state["last_seen"]["network"] = time.time()
+            self.state["network"][key] = value
+
+    def handle_network_status(self, msg):
+        self.set_network_value("status", msg.data)
+
+    def handle_network_reason(self, msg):
+        self.set_network_value("reason", msg.data)
+
+    def handle_wifi_state(self, msg):
+        self.set_network_value("wifi_state", msg.data)
+
+    def handle_wifi_ssid(self, msg):
+        self.set_network_value("wifi_ssid", msg.data)
+
+    def handle_wifi_available(self, msg):
+        self.set_network_value("wifi_available_ssids", msg.data or "--")
+
+    def handle_wifi_signal_bars(self, msg):
+        self.set_network_value("wifi_signal_bars", int(msg.data))
+
+    def handle_wifi_speed(self, msg):
+        self.set_network_value("wifi_speed_mbps", int(msg.data))
+
+    def handle_lte_state(self, msg):
+        self.set_network_value("lte_state", msg.data)
+
+    def handle_lte_operator(self, msg):
+        self.set_network_value("lte_operator", msg.data)
+
+    def handle_lte_rat(self, msg):
+        self.set_network_value("lte_rat", msg.data)
+
+    def handle_lte_rssi(self, msg):
+        self.set_network_value("lte_rssi", msg.data)
+
+    def handle_lte_rsrp(self, msg):
+        self.set_network_value("lte_rsrp", msg.data)
+
+    def handle_lte_rsrq(self, msg):
+        self.set_network_value("lte_rsrq", msg.data)
+
+    def handle_lte_sinr(self, msg):
+        self.set_network_value("lte_sinr", msg.data)
+
+    def handle_at_summary(self, msg):
+        self.set_network_value("at_summary", msg.data)
+
     def health_status_text(self, value):
         return {
             HealthStatus.OK: "OK",
@@ -487,6 +578,8 @@ class DashboardBridgeNode(Node):
             SupervisorStatus.REASON_REQUIRED_HEALTH_FAILED: "REQUIRED_HEALTH_FAILED",
             SupervisorStatus.REASON_PLANNED_INACTIVE: "PLANNED_INACTIVE",
             SupervisorStatus.REASON_MANAGEMENT_STATUS_STALE: "MANAGEMENT_STATUS_STALE",
+            SupervisorStatus.REASON_NETWORK_STATUS_STALE: "NETWORK_STATUS_STALE",
+            SupervisorStatus.REASON_NETWORK_UNHEALTHY: "NETWORK_UNHEALTHY",
 
         }.get(value, f"UNKNOWN_{value}")
 

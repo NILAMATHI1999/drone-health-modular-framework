@@ -3,6 +3,7 @@ supervisor_node:
       safety_status_topic: /safety/status
       health_status_topic: /health/status
       management_state_topic: /management/state
+      network_status_topic: /network_status
       supervisor_status_topic: /supervisor/status
       heartbeat_topic: /supervisor/heartbeat
 
@@ -10,6 +11,8 @@ supervisor_node:
       safety_status_timeout_ms: 500
       health_status_timeout_ms: 1500
       management_state_timeout_ms: 1500
+      network_status_timeout_ms: 3000
+      network_failsafe_delay_ms: 10000
 
       heartbeat_period_ms: 500
       heartbeat_deadline_ms: 700
