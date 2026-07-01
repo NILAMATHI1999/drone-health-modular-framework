@@ -21,6 +21,44 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32, Int32, String
 
 
+def clean_at_value(value):
+    if value is None:
+        return "--"
+
+    text = str(value).strip()
+    if not text or text == "--":
+        return "--"
+
+    return text.split(" from AT", 1)[0].strip() or "--"
+
+
+def build_at_modem_summary(network):
+    state = clean_at_value(network.get("at_modem_state"))
+    status_by_state = {
+        "CONNECTED": "OK",
+        "CONNECTED_MOCK": "OK",
+        "ERROR_MOCK": "ERROR",
+        "TIMEOUT_MOCK": "TIMEOUT",
+        "NO_SIM_MOCK": "NO_SIM",
+        "NO_SERVICE_MOCK": "NO_SERVICE",
+        "MODEM_BUSY_MOCK": "BUSY",
+        "SERIAL_DISCONNECTED_MOCK": "SERIAL_DISCONNECTED",
+    }
+    at_status = status_by_state.get(state, "NO_RESPONSE")
+    prefix = "Mock Serial AT" if state.endswith("_MOCK") else "Serial AT"
+    operator_name = clean_at_value(network.get("at_modem_operator"))
+    rat = clean_at_value(network.get("at_modem_rat"))
+    rssi = clean_at_value(network.get("at_modem_rssi"))
+    rsrp = clean_at_value(network.get("at_modem_rsrp"))
+    rsrq = clean_at_value(network.get("at_modem_rsrq"))
+    sinr = clean_at_value(network.get("at_modem_sinr"))
+
+    return (
+        f"{prefix}: AT={at_status}; AT+CSQ={rssi}; AT+COPS?={operator_name}; "
+        f"AT^SYSINFOEX={rat}; AT^HCSQ?={rsrp},{rsrq},{sinr}"
+    )
+
+
 class DashboardBridgeNode(Node):
     def __init__(self):
         super().__init__("dashboard_bridge_node")
@@ -81,6 +119,14 @@ class DashboardBridgeNode(Node):
                 "lte_rsrp": "--",
                 "lte_rsrq": "--",
                 "lte_sinr": "--",
+                "hilink_summary": "--",
+                "at_modem_state": "NO_DATA",
+                "at_modem_operator": "--",
+                "at_modem_rat": "--",
+                "at_modem_rssi": "--",
+                "at_modem_rsrp": "--",
+                "at_modem_rsrq": "--",
+                "at_modem_sinr": "--",
                 "at_summary": "--",
             },
             "health": {},
@@ -94,6 +140,8 @@ class DashboardBridgeNode(Node):
                 "nearest_obstacle": None,
                 "velocity": None,
                 "network": None,
+                "at_summary": None,
+                "at_modem": None,
 
             },
         }
@@ -140,6 +188,13 @@ class DashboardBridgeNode(Node):
         self.create_subscription(String, "/network/lte/rsrq_db", self.handle_lte_rsrq, 10)
         self.create_subscription(String, "/network/lte/sinr_db", self.handle_lte_sinr, 10)
         self.create_subscription(String, "/network/at_hilink/at_summary", self.handle_at_summary, 10)
+        self.create_subscription(String, "/network/at_lte/state", self.handle_at_modem_state, 10)
+        self.create_subscription(String, "/network/at_lte/operator", self.handle_at_modem_operator, 10)
+        self.create_subscription(String, "/network/at_lte/rat", self.handle_at_modem_rat, 10)
+        self.create_subscription(String, "/network/at_lte/rssi_dbm", self.handle_at_modem_rssi, 10)
+        self.create_subscription(String, "/network/at_lte/rsrp_dbm", self.handle_at_modem_rsrp, 10)
+        self.create_subscription(String, "/network/at_lte/rsrq_db", self.handle_at_modem_rsrq, 10)
+        self.create_subscription(String, "/network/at_lte/sinr_db", self.handle_at_modem_sinr, 10)
 
         self.web_root = Path(get_package_share_directory("drone_health_dashboard")) / "web"
         self.httpd = self.make_server()
@@ -214,6 +269,8 @@ class DashboardBridgeNode(Node):
         nearest_seen = snapshot["last_seen"].get("nearest_obstacle")
         velocity_seen = snapshot["last_seen"].get("velocity")
         network_seen = snapshot["last_seen"].get("network")
+        at_summary_seen = snapshot["last_seen"].get("at_summary")
+        at_modem_seen = snapshot["last_seen"].get("at_modem")
 
         if supervisor_seen is None:
             snapshot["supervisor"] = {
@@ -286,6 +343,12 @@ class DashboardBridgeNode(Node):
         elif now - network_seen > 3.0:
             snapshot["network"]["status"] = "STALE"
             snapshot["network"]["reason"] = "network data is not updating"
+
+        if at_summary_seen is not None and now - at_summary_seen > 3.0:
+            snapshot["network"]["hilink_summary"] = "STALE"
+
+        if at_modem_seen is not None and now - at_modem_seen > 3.0:
+            snapshot["network"]["at_summary"] = "STALE"
 
         if health_seen is not None and now - health_seen > 2.0:
             for item in snapshot["health"].values():
@@ -477,7 +540,39 @@ class DashboardBridgeNode(Node):
         self.set_network_value("lte_sinr", msg.data)
 
     def handle_at_summary(self, msg):
-        self.set_network_value("at_summary", msg.data)
+        with self.lock:
+            self.state["last_seen"]["network"] = time.time()
+            self.state["last_seen"]["at_summary"] = time.time()
+            self.state["network"]["hilink_summary"] = msg.data or "--"
+
+    def set_at_modem_value(self, key, value):
+        with self.lock:
+            now = time.time()
+            self.state["last_seen"]["network"] = now
+            self.state["last_seen"]["at_modem"] = now
+            self.state["network"][key] = value or "--"
+            self.state["network"]["at_summary"] = build_at_modem_summary(self.state["network"])
+
+    def handle_at_modem_state(self, msg):
+        self.set_at_modem_value("at_modem_state", msg.data)
+
+    def handle_at_modem_operator(self, msg):
+        self.set_at_modem_value("at_modem_operator", msg.data)
+
+    def handle_at_modem_rat(self, msg):
+        self.set_at_modem_value("at_modem_rat", msg.data)
+
+    def handle_at_modem_rssi(self, msg):
+        self.set_at_modem_value("at_modem_rssi", msg.data)
+
+    def handle_at_modem_rsrp(self, msg):
+        self.set_at_modem_value("at_modem_rsrp", msg.data)
+
+    def handle_at_modem_rsrq(self, msg):
+        self.set_at_modem_value("at_modem_rsrq", msg.data)
+
+    def handle_at_modem_sinr(self, msg):
+        self.set_at_modem_value("at_modem_sinr", msg.data)
 
     def health_status_text(self, value):
         return {
