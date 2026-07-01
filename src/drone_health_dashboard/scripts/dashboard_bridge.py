@@ -32,8 +32,8 @@ def clean_at_value(value):
     return text.split(" from AT", 1)[0].strip() or "--"
 
 
-def build_at_modem_summary(network):
-    state = clean_at_value(network.get("at_modem_state"))
+def at_status_from_state(state_value):
+    state = clean_at_value(state_value)
     status_by_state = {
         "CONNECTED": "OK",
         "CONNECTED_MOCK": "OK",
@@ -44,19 +44,11 @@ def build_at_modem_summary(network):
         "MODEM_BUSY_MOCK": "BUSY",
         "SERIAL_DISCONNECTED_MOCK": "SERIAL_DISCONNECTED",
     }
-    at_status = status_by_state.get(state, "NO_RESPONSE")
-    prefix = "Mock Serial AT" if state.endswith("_MOCK") else "Serial AT"
-    operator_name = clean_at_value(network.get("at_modem_operator"))
-    rat = clean_at_value(network.get("at_modem_rat"))
-    rssi = clean_at_value(network.get("at_modem_rssi"))
-    rsrp = clean_at_value(network.get("at_modem_rsrp"))
-    rsrq = clean_at_value(network.get("at_modem_rsrq"))
-    sinr = clean_at_value(network.get("at_modem_sinr"))
+    return status_by_state.get(state, "NO_RESPONSE")
 
-    return (
-        f"{prefix}: AT={at_status}; AT+CSQ={rssi}; AT+COPS?={operator_name}; "
-        f"AT^SYSINFOEX={rat}; AT^HCSQ?={rsrp},{rsrq},{sinr}"
-    )
+
+def build_at_modem_summary(network):
+    return f"AT={at_status_from_state(network.get('at_modem_state'))}"
 
 
 class DashboardBridgeNode(Node):

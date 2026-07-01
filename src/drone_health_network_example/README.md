@@ -106,6 +106,8 @@ LTE / Huawei tab:
 
 Serial AT tab:
   Source is at_modem_monitor_node.
+  The top row shows the overall AT response, for example AT=OK, AT=ERROR, or AT=TIMEOUT.
+  The rows below show AT-style command values such as AT+COPS?, AT^SYSINFOEX, AT+CSQ, and AT^HCSQ.
   With mock_mode:=true, values are fake hardcoded AT-style values for dashboard and health testing.
   Future students can replace the template backend with real /dev/ttyUSB0 serial AT communication.
 ```
@@ -127,16 +129,31 @@ SINR: 2 dB
 PLMN: 26202
 ```
 
-These appear in the dashboard Serial AT tab as:
+These appear in the dashboard Serial AT tab as rows:
 
 ```text
-Mock Serial AT: AT=OK; AT+CSQ=-65 dBm; AT+COPS?=MOCK_OPERATOR; AT^SYSINFOEX=LTE/4G; AT^HCSQ?=-96 dBm,-12 dB,2 dB
+AT              AT=OK
+Source          Mock Serial AT
+State           CONNECTED_MOCK
+AT+COPS?        MOCK_OPERATOR
+AT^SYSINFOEX    LTE/4G
+AT+CSQ          -65 dBm
+AT^HCSQ RSRP    -96 dBm
+AT^HCSQ RSRQ    -12 dB
+AT^HCSQ SINR    2 dB
 ```
 
 Failure modes appear as simulated AT responses. For example, `mock_response_mode:=timeout` produces:
 
 ```text
-Mock Serial AT: AT=TIMEOUT; AT+CSQ=TIMEOUT; AT+COPS?=TIMEOUT; AT^SYSINFOEX=TIMEOUT; AT^HCSQ?=TIMEOUT,TIMEOUT,TIMEOUT
+AT              AT=TIMEOUT
+State           TIMEOUT_MOCK
+AT+COPS?        TIMEOUT
+AT^SYSINFOEX    TIMEOUT
+AT+CSQ          TIMEOUT
+AT^HCSQ RSRP    TIMEOUT
+AT^HCSQ RSRQ    TIMEOUT
+AT^HCSQ SINR    TIMEOUT
 ```
 
 ---
