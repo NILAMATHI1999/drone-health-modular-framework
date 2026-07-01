@@ -7,31 +7,31 @@ A high-level decision-making node that fuses **Safety Status**, **System Health*
 ## 🏗️ Architecture
 
 ```mermaid
-graph TD
-    Safety["/safety/status<br/>Braking Math"] --> Eval{🧠 Evaluation Engine<br/>10Hz Loop}
+flowchart TD
+    Safety["/safety/status<br/>Braking Math"] --> Eval{"Evaluation Engine<br/>10Hz Loop"}
     Health["/health/status<br/>Topic Diagnostics"] --> Eval
-    Mgmt["/management/state<br/>Mission/Maintenance"] --> Eval
+    Mgmt["/management/state<br/>Mission / Maintenance"] --> Eval
     Net["/network_status<br/>Link Quality"] --> Eval
-    
-    subgraph Core ["Supervisor Logic"]
-        Eval --> TimeoutCheck{Timeouts?}
-        TimeoutCheck -->|Yes| Failsafe[⛔ FAILSAFE]
-        TimeoutCheck -->|No| SafetyCheck{Safety Unsafe?}
-        SafetyCheck -->|Yes| EStop[🚨 EMERGENCY STOP<br/>(Latched)]
-        SafetyCheck -->|No| HealthCheck{Health Failed?}
-        HealthCheck -->|Yes| Hold[✋ HOLD]
-        HealthCheck -->|No| MaintCheck{Maintenance?}
+
+    subgraph Core["Supervisor Logic"]
+        Eval --> TimeoutCheck{"Timeouts?"}
+        TimeoutCheck -->|Yes| Failsafe["FAILSAFE"]
+        TimeoutCheck -->|No| SafetyCheck{"Safety Unsafe?"}
+        SafetyCheck -->|Yes| EStop["EMERGENCY STOP<br/>Latched"]
+        SafetyCheck -->|No| HealthCheck{"Health Failed?"}
+        HealthCheck -->|Yes| Hold["HOLD"]
+        HealthCheck -->|No| MaintCheck{"Maintenance?"}
         MaintCheck -->|Yes| Hold
-        MaintCheck -->|No| Normal[✅ NORMAL<br/>Command Allowed]
+        MaintCheck -->|No| Normal["NORMAL<br/>Command Allowed"]
     end
-    
+
     EStop --> Pub["/supervisor/status"]
     Failsafe --> Pub
     Hold --> Pub
     Normal --> Pub
-    
+
     ResetSrv["/supervisor/reset_emergency_stop"] -.->|Clear Latch| EStop
-    Pub --> Heartbeat["💓 /supervisor/heartbeat<br/>Manual Liveliness"]
+    Pub --> Heartbeat["/supervisor/heartbeat<br/>Manual Liveliness"]
 ```
 
 **Flow**: The node runs a 10Hz evaluation loop. It checks input freshness first (timeouts → Failsafe). Then it checks physical safety (obstacles → Latched E-Stop). Finally, it validates system health and network status. Commands are only allowed in `NORMAL` mode.
