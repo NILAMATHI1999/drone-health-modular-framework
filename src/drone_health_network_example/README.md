@@ -2,87 +2,45 @@
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble%20%7C%20Iron%20%7C%20Jazzy-blue)](https://docs.ros.org/)
 
-A multi-source network health monitoring package that tracks WiFi, LTE (NetworkManager + AT-over-HTTP HiLink), and serial AT modem links, fusing them into a single redundant connectivity status for the Supervisor Node in the drone health framework.
+A multi-source network health monitoring package that tracks Wi-Fi, LTE through NetworkManager and Huawei HiLink HTTP, and a serial AT modem template/mock. The nodes fuse Wi-Fi and LTE into one redundant connectivity status for the Supervisor Node in the drone health framework.
 
 ---
 
-<<<<<<< HEAD
-The nodes publish Wi-Fi, LTE, network-fusion, Huawei HiLink, and serial-AT-template topics that can
-be monitored by HealthMonitor and shown in the dashboard.
-=======
-## 🏗️ Architecture
->>>>>>> 3e84bce60464f48acbb9ccebd1877dec9f8042b0
+## Architecture
 
 ```mermaid
 graph TD
-    WIFI["📶 wifi_monitor_node<br/>nmcli dev wifi"] -->|/network/wifi/state| FUSE
-    LTE["📡 lte_monitor_node<br/>nmcli + HiLink XML API"] -->|/network/lte/state| FUSE
-    HILINK["🔌 at_hilink_adapter_node<br/>HTTP curl -> AT commands"] -->|/network/at_hilink/*| Diag["📋 Diagnostics Only"]
-    MODEM["🔧 at_modem_monitor_node<br/>Serial AT template/mock"] -->|/network/at_lte/*| Diag
+    WIFI["wifi_monitor_node<br/>nmcli dev wifi"] -->|/network/wifi/state| FUSE
+    LTE["lte_monitor_node<br/>nmcli + HiLink XML API"] -->|/network/lte/state| FUSE
+    HILINK["at_hilink_adapter_node<br/>HTTP curl -> AT-style fields"] -->|/network/at_hilink/*| Diag["Diagnostics Only"]
+    MODEM["at_modem_monitor_node<br/>Serial AT template/mock"] -->|/network/at_lte/*| Diag
 
     subgraph FUSE ["network_fusion_node"]
-        Logic["⚡ Freshness + Priority Logic<br/>WiFi > LTE > NONE"]
+        Logic["Freshness + Priority Logic<br/>Wi-Fi > LTE > NONE"]
     end
 
-<<<<<<< HEAD
-## Topics
-
-Important outputs:
-
-```text
-/network/wifi/state
-/network/wifi/connected_ssid
-/network/wifi/available_ssids
-/network/wifi/signal_bars
-/network/wifi/link_speed_mbps
-/network/wifi/heartbeat
-/network/lte/state
-/network/lte/operator
-/network/lte/rat
-/network/lte/rssi_dbm
-/network/lte/rsrp_dbm
-/network/lte/rsrq_db
-/network/lte/sinr_db
-/network/lte/heartbeat
-/network_status
-/network_reason
-/network/heartbeat
-/network/at_hilink/at_summary
-/network/at_lte/state
-/network/at_lte/operator
-/network/at_lte/rat
-/network/at_lte/rssi_dbm
-/network/at_lte/rsrp_dbm
-/network/at_lte/rsrq_db
-/network/at_lte/sinr_db
-/network/at_lte/heartbeat
-=======
-    Logic --> Status["📊 /network_status<br/>HEALTHY / BACKUP / UNHEALTHY"]
-    Logic --> Reason["📝 /network_reason"]
-    Status --> SV["🧠 Supervisor Node"]
->>>>>>> 3e84bce60464f48acbb9ccebd1877dec9f8042b0
+    Logic --> Status["/network_status<br/>HEALTHY / BACKUP / UNHEALTHY"]
+    Logic --> Reason["/network_reason"]
+    Status --> SV["Supervisor Node"]
 ```
 
-**Flow**: `wifi_monitor_node` and `lte_monitor_node` independently report link state. `network_fusion_node` checks freshness (10s timeout) and prefers WiFi over LTE, publishing a single `/network_status` consumed by the Supervisor. The AT adapter nodes provide deep diagnostic telemetry (signal, operator, RAT) but do not feed directly into the fusion decision.
+Flow: `wifi_monitor_node` and `lte_monitor_node` independently report link state. `network_fusion_node` checks freshness with a 10 second timeout and prefers Wi-Fi over LTE, publishing one `/network_status` consumed by the Supervisor. The AT adapter nodes provide diagnostic telemetry such as signal, operator, and RAT, but do not feed directly into the fusion decision.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
-# Build
 colcon build --packages-select drone_health_network_example
 source install/setup.bash
 
-# Run each node in separate terminals
 ros2 run drone_health_network_example wifi_monitor_node
 ros2 run drone_health_network_example lte_monitor_node
 ros2 run drone_health_network_example network_fusion_node
 ros2 run drone_health_network_example at_hilink_adapter_node
-ros2 run drone_health_network_example at_modem_monitor_node --ros-args -p mock_mode:=true
+ros2 run drone_health_network_example at_modem_monitor_node --ros-args -p mock_mode:=true -p mock_response_mode:=ok
 ```
 
-<<<<<<< HEAD
 Tune mock AT timing parameters:
 
 ```bash
@@ -108,7 +66,7 @@ ros2 run drone_health_network_example at_modem_monitor_node --ros-args \
   -p mock_response_mode:=timeout
 ```
 
-Other supported mock response modes:
+Supported mock response modes:
 
 ```text
 ok
@@ -119,6 +77,22 @@ no_service
 modem_busy
 serial_disconnect
 ```
+
+---
+
+## Nodes And Topics
+
+| Node | Publishes | Source |
+|---|---|---|
+| `wifi_monitor_node` | `/network/wifi/state`, `/network/wifi/connected_ssid`, `/network/wifi/link_speed_mbps`, `/network/wifi/signal_bars`, `/network/wifi/available_ssids` | `nmcli dev wifi` |
+| `lte_monitor_node` | `/network/lte/state`, `/network/lte/operator`, `/network/lte/rat`, `/network/lte/rssi_dbm`, `/network/lte/rsrp_dbm`, `/network/lte/rsrq_db`, `/network/lte/sinr_db`, `/network/lte/plmn` | `nmcli` interface + HiLink HTTP XML |
+| `at_hilink_adapter_node` | `/network/at_hilink/*`, including `/network/at_hilink/at_summary` | Huawei HiLink HTTP API through `curl` |
+| `at_modem_monitor_node` | `/network/at_lte/*`, including state, operator, RAT, RSSI, RSRP, RSRQ, SINR, PLMN | Serial AT template or mock |
+| `network_fusion_node` | `/network_status`, `/network_reason`, `/network/heartbeat` | Fuses Wi-Fi + LTE freshness/state |
+
+All nodes publish a heartbeat on their own namespace, for example `/network/wifi/heartbeat`, with manual liveliness QoS.
+
+---
 
 ## Dashboard Meaning
 
@@ -135,6 +109,8 @@ Serial AT tab:
   With mock_mode:=true, values are fake hardcoded AT-style values for dashboard and health testing.
   Future students can replace the template backend with real /dev/ttyUSB0 serial AT communication.
 ```
+
+---
 
 ## Mock AT Values
 
@@ -157,6 +133,14 @@ These appear in the dashboard Serial AT tab as:
 Mock Serial AT: AT=OK; AT+CSQ=-65 dBm; AT+COPS?=MOCK_OPERATOR; AT^SYSINFOEX=LTE/4G; AT^HCSQ?=-96 dBm,-12 dB,2 dB
 ```
 
+Failure modes appear as simulated AT responses. For example, `mock_response_mode:=timeout` produces:
+
+```text
+Mock Serial AT: AT=TIMEOUT; AT+CSQ=TIMEOUT; AT+COPS?=TIMEOUT; AT^SYSINFOEX=TIMEOUT; AT^HCSQ?=TIMEOUT,TIMEOUT,TIMEOUT
+```
+
+---
+
 ## AT Timing Parameters
 
 The professor's suggestion to "play with the numbers" means testing different modem timing values:
@@ -167,87 +151,52 @@ command_delay_ms     delay between AT commands; start around 2000 ms
 response_timeout_ms  time to wait for OK, ERROR, or timeout
 ```
 
-In mock mode these parameters document and simulate the intended behavior. `mock_response_mode`
-lets the dashboard show expected success, error, timeout, no-SIM, no-service, modem-busy, and
-serial-disconnect states. Real stability testing requires serial LTE/5G hardware.
-
-## Hardware Notes
-=======
----
->>>>>>> 3e84bce60464f48acbb9ccebd1877dec9f8042b0
-
-## 📡 Nodes & Topics
-
-| Node | Publishes | Source |
-|---|---|---|
-| `wifi_monitor_node` | `/network/wifi/state`, `connected_ssid`, `link_speed_mbps`, `signal_bars`, `available_ssids` | `nmcli dev wifi` |
-| `lte_monitor_node` | `/network/lte/state`, `operator`, `rat`, `rssi_dbm`, `rsrp_dbm`, `rsrq_db`, `sinr_db`, `plmn` | `nmcli` interface + HiLink HTTP XML |
-| `at_hilink_adapter_node` | `/network/at_hilink/*` (state, operator, rat, rssi, rsrp, rsrq, sinr, plmn, at_summary) | HiLink router HTTP API (curl) |
-| `at_modem_monitor_node` | `/network/at_lte/*` (state, operator, rat, rssi, rsrp, rsrq, sinr, plmn) | Serial AT commands (mock or template) |
-| `network_fusion_node` | `/network_status`, `/network_reason` | Fuses WiFi + LTE freshness/state |
-
-<<<<<<< HEAD
-`at_modem_monitor_node` is a mock/template for future serial AT-command modem support. Its real
-serial backend is intentionally not implemented yet.
-
-The remaining hardware-dependent work is to implement `send_at_command()` so it opens a serial
-port such as `/dev/ttyUSB0`, writes AT commands, waits between commands, reads until `OK`, `ERROR`,
-or timeout, handles retries/errors, and returns the raw modem response for parsing.
-=======
-All nodes publish a `heartbeat` on their own namespace (e.g. `/network/wifi/heartbeat`) with manual liveliness QoS.
-
-```mermaid
-classDiagram
-    class NetworkStatus {
-        NETWORK_HEALTHY : WiFi connected & fresh
-        NETWORK_BACKUP : LTE connected & fresh (WiFi down)
-        NETWORK_UNHEALTHY : Both stale or disconnected
-    }
-```
+In mock mode these parameters document and simulate the intended behavior. `mock_response_mode` lets the dashboard show expected success, error, timeout, no-SIM, no-service, modem-busy, and serial-disconnect states. Real stability testing requires serial LTE/5G hardware.
 
 ---
 
-## 🌟 Why It's Reusable
-
-| Feature | Benefit |
-|---|---|
-| **Source-agnostic fusion** | `network_fusion_node` only needs `state` strings — swap in any link type |
-| **HTTP & Serial AT support** | HiLink adapter works out-of-box; serial template ready for real modem hardware |
-| **Mock mode** | `at_modem_monitor_node` runs without hardware for development/testing |
-| **Freshness-based failover** | Stale data (>10s) is treated as disconnected, preventing false "healthy" status |
-| **Heartbeat per source** | Health Monitor can detect if a specific link monitor process crashes |
-
----
-
-## 🔄 Fusion Decision Logic
+## Fusion Decision Logic
 
 ```mermaid
 stateDiagram-v2
     [*] --> CheckWifi
-    CheckWifi --> NETWORK_HEALTHY: WiFi fresh & CONNECTED
-    CheckWifi --> CheckLte: WiFi stale/disconnected
-    CheckLte --> NETWORK_BACKUP: LTE fresh & CONNECTED
+    CheckWifi --> NETWORK_HEALTHY: Wi-Fi fresh and CONNECTED
+    CheckWifi --> CheckLte: Wi-Fi stale/disconnected
+    CheckLte --> NETWORK_BACKUP: LTE fresh and CONNECTED
     CheckLte --> NETWORK_UNHEALTHY: LTE stale/disconnected
 ```
 
-| Condition | `/network_status` | `active` |
+| Condition | `/network_status` | Active connection |
 |---|---|---|
-| WiFi fresh + CONNECTED | `NETWORK_HEALTHY` | `WIFI` |
-| WiFi down, LTE fresh + CONNECTED | `NETWORK_BACKUP` | `LTE` |
+| Wi-Fi fresh + `CONNECTED` | `NETWORK_HEALTHY` | `WIFI` |
+| Wi-Fi down, LTE fresh + `CONNECTED` | `NETWORK_BACKUP` | `LTE` |
 | Both stale or disconnected | `NETWORK_UNHEALTHY` | `NONE` |
 
 ---
 
-## ⚙️ Configuration Notes
+## Why It Is Reusable
 
-- **`lte_monitor_node`**: hardcoded `lte_interface_` (e.g. `enx001e101f0000`) — update to match your USB/LTE dongle interface name.
-- **`at_hilink_adapter_node`**: targets HiLink router default gateway `192.168.8.1` via `curl`; no params needed.
-- **`at_modem_monitor_node`** parameters:
+| Feature | Benefit |
+|---|---|
+| Source-agnostic fusion | `network_fusion_node` only needs state strings, so another link type can replace Wi-Fi or LTE |
+| HTTP and serial AT paths | HiLink adapter works with the current Huawei stick; serial template is ready for future modem hardware |
+| Mock mode | `at_modem_monitor_node` runs without hardware for development, dashboard testing, and failure-mode demos |
+| Freshness-based failover | Stale data after 10 seconds is treated as disconnected, reducing false healthy states |
+| Heartbeat per source | Health Monitor can detect if a specific link monitor process crashes |
+
+---
+
+## Configuration Notes
+
+- `lte_monitor_node`: hardcoded `lte_interface_`, for example `enx001e101f0000`; update this to match the USB/LTE dongle interface name.
+- `at_hilink_adapter_node`: targets the HiLink router default gateway `192.168.8.1` through `curl`; no parameters are currently required.
+- `at_modem_monitor_node` parameters:
 
 ```yaml
 at_modem_monitor_node:
   ros__parameters:
     mock_mode: true
+    mock_response_mode: ok
     serial_port: /dev/ttyUSB0
     baud_rate: 115200
     poll_period_ms: 2000
@@ -255,11 +204,11 @@ at_modem_monitor_node:
     response_timeout_ms: 1000
 ```
 
-> ⚠️ `send_at_command()` in `at_modem_monitor_node` is a **template stub**. Real serial AT support (open port, write `AT\r`, parse `OK`/`ERROR`) is future implementation work.
+`send_at_command()` in `at_modem_monitor_node` is a template stub. The remaining hardware-dependent work is to open a serial port such as `/dev/ttyUSB0`, write AT commands, wait between commands, read until `OK`, `ERROR`, or timeout, handle retries/errors, and return the raw modem response for parsing.
 
 ---
 
-## 🛠️ Build & Debug
+## Build And Debug
 
 ```bash
 colcon build --packages-select drone_health_network_example
@@ -268,11 +217,12 @@ source install/setup.bash
 ros2 topic echo /network_status
 ros2 topic echo /network_reason
 ros2 topic echo /network/at_hilink/at_summary
+ros2 topic echo /network/at_lte/state
 ```
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 ```mermaid
 graph LR
@@ -281,10 +231,10 @@ graph LR
     Pkg --> std_msgs
 ```
 
-System tools required at runtime: `nmcli` (NetworkManager), `curl` (HiLink HTTP API).
+System tools required at runtime: `nmcli` for NetworkManager and `curl` for the HiLink HTTP API.
 
 ---
 
-## 📄 License
+## License
+
 MIT License. Free to use for academic and commercial projects.
->>>>>>> 3e84bce60464f48acbb9ccebd1877dec9f8042b0
