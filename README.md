@@ -49,6 +49,7 @@ graph TD
         DASH["🖥️ dashboard_bridge.py<br/>SSE Stream on :8080"]
     end
 
+    %% Original correct arrows
     LIDAR --> LPROC
     LPROC --> SF
     FLOW --> SF
@@ -71,6 +72,19 @@ graph TD
     HM --> DASH
     MN --> DASH
     NF --> DASH
+
+    %% Missing arrows added
+    MN --> SF
+    LIDAR --> HM
+    FLOW --> HM
+    LPROC --> HM
+    SF --> HM
+    SV --> HM
+    NF --> HM
+    WIFI --> HM
+    LTE --> HM
+    HILINK --> HM
+    MODEM --> HM
 ```
 
 ---
