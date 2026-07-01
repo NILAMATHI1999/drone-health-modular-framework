@@ -379,6 +379,14 @@ class DashboardBridgeNode(Node):
         key = msg.topic_name or msg.node_name
 
         with self.lock:
+            management = self.state.get("management", {})
+            inactive_modules = set(management.get("planned_inactive_modules", []))
+            inactive_topics = set(management.get("planned_inactive_topics", []))
+
+            if msg.node_name in inactive_modules or msg.topic_name in inactive_topics:
+                self.state["health"].pop(key, None)
+                return
+
             self.state["last_seen"]["health"] = time.time()
             self.state["health_stale_event_sent"] = False
             old_status = self.state["health"].get(key, {}).get("status")
@@ -453,6 +461,25 @@ class DashboardBridgeNode(Node):
                 "rejected_modules": list(msg.rejected_modules),
                 "rejected_module_reasons": list(msg.rejected_module_reasons),
             }
+
+            inactive_modules = set(msg.planned_inactive_modules)
+            inactive_topics = set(msg.planned_inactive_topics)
+            removed_health = []
+
+            for key, health in list(self.state["health"].items()):
+                if (
+                    health.get("node_name") in inactive_modules
+                    or health.get("topic_name") in inactive_topics
+                ):
+                    removed_health.append(health.get("topic_name") or health.get("node_name") or key)
+                    del self.state["health"][key]
+
+            if removed_health:
+                self.add_event(
+                    "Health tiles removed for planned inactive: " +
+                    ", ".join(sorted(removed_health)[:3]),
+                    "gray",
+                )
 
             if old_message and old_message != msg.message:
                 self.add_event(f"Management: {msg.message}", "gray")

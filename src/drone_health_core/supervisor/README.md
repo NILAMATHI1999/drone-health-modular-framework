@@ -1,105 +1,198 @@
-# supervisor_node
+# ROS 2 Autonomous Supervisor Node
 
-## Purpose
+A high-level decision-making node that fuses **Safety Status**, **System Health**, **Network Connectivity**, and **Management State** to determine global system authorization. It acts as the final "Go/No-Go" gatekeeper, enforcing strict failsafes, latched emergency stops, and network-dependent hold modes.
 
-Combines safety, health, and management state into the final system decision.
+---
 
-The supervisor is the final decision layer. It does not calculate obstacle braking distance and it
-does not monitor raw sensor QoS directly. It uses the outputs from SafetyFusion, HealthMonitor, and
-ManagementNode to decide whether the system is normal, holding, in failsafe, or emergency stopped.
+## 🏗️ Architecture
 
-## Inputs
+```mermaid
+flowchart TD
+    Safety["/safety/status<br/>Braking Math"] --> Eval{"Evaluation Engine<br/>10Hz Loop"}
+    Health["/health/status<br/>Topic Diagnostics"] --> Eval
+    Mgmt["/management/state<br/>Mission / Maintenance"] --> Eval
+    Net["/network_status<br/>Link Quality"] --> Eval
 
-- `/safety/status` (`drone_health_interfaces/msg/SafetyStatus`)
-- `/health/status` (`drone_health_interfaces/msg/HealthStatus`)
-- `/management/state` (`drone_health_interfaces/msg/ManagementState`)
+    subgraph Core["Supervisor Logic"]
+        Eval --> TimeoutCheck{"Timeouts?"}
+        TimeoutCheck -->|Yes| Failsafe["FAILSAFE"]
+        TimeoutCheck -->|No| SafetyCheck{"Safety Unsafe?"}
+        SafetyCheck -->|Yes| EStop["EMERGENCY STOP<br/>Latched"]
+        SafetyCheck -->|No| HealthCheck{"Health Failed?"}
+        HealthCheck -->|Yes| Hold["HOLD"]
+        HealthCheck -->|No| MaintCheck{"Maintenance?"}
+        MaintCheck -->|Yes| Hold
+        MaintCheck -->|No| Normal["NORMAL<br/>Command Allowed"]
+    end
 
-## Outputs
+    EStop --> Pub["/supervisor/status"]
+    Failsafe --> Pub
+    Hold --> Pub
+    Normal --> Pub
 
-- `/supervisor/status` (`drone_health_interfaces/msg/SupervisorStatus`)
-- `/supervisor/heartbeat` (`std_msgs/msg/String`)
+    ResetSrv["/supervisor/reset_emergency_stop"] -.->|Clear Latch| EStop
+    Pub --> Heartbeat["/supervisor/heartbeat<br/>Manual Liveliness"]
+```
 
-## Parameters
+**Flow**: The node runs a 10Hz evaluation loop. It checks input freshness first (timeouts → Failsafe). Then it checks physical safety (obstacles → Latched E-Stop). Finally, it validates system health and network status. Commands are only allowed in `NORMAL` mode.
 
-Configured in `supervisor.yaml`.
+---
 
-Important parameters:
-
-- `safety_status_topic`
-- `health_status_topic`
-- `management_state_topic`
-- `supervisor_status_topic`
-- `heartbeat_topic`
-- `required_health_topics`
-- `safety_status_timeout_ms`
-- `health_status_timeout_ms`
-- `management_state_timeout_ms`
-- `heartbeat_period_ms`
-- `heartbeat_deadline_ms`
-- `heartbeat_liveliness_ms`
-
-## Run command
+## 🚀 Quick Start
 
 ```bash
+colcon build --packages-select drone_health_core
+source install/setup.bash
 ros2 run drone_health_core supervisor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/supervisor/supervisor.yaml
 ```
 
-## Expected Behavior
+```yaml
+supervisor_node:
+  ros__parameters:
+    # --- Topics ---
+    safety_status_topic: /safety/status
+    health_status_topic: /health/status
+    management_state_topic: /management/state
+    network_status_topic: /network_status
+    supervisor_status_topic: /supervisor/status
+    heartbeat_topic: /supervisor/heartbeat
 
-When the system is healthy and SafetyFusion reports safe, the supervisor publishes a normal state
-and allows commands.
+    # --- Timing ---
+    evaluation_period_ms: 100
+    safety_status_timeout_ms: 500
+    health_status_timeout_ms: 1500
+    management_state_timeout_ms: 1500
+    network_status_timeout_ms: 3000
+    network_failsafe_delay_ms: 10000  # Grace period before Failsafe on net loss
 
-Example normal behavior:
+    # --- Heartbeat QoS ---
+    heartbeat_period_ms: 500
+    heartbeat_deadline_ms: 700
+    heartbeat_liveliness_ms: 1500
 
-```text
-SafetyFusion SAFE
-required health topics OK
-management state fresh
-no critical planned inactive module
--> Supervisor NORMAL / command allowed
+    # --- Critical Dependencies ---
+    required_health_topics:
+      - /lidar/scan
+      - /vehicle/velocity
+      - /safety_fusion/heartbeat
 ```
 
-If SafetyFusion reports unsafe because an obstacle is too close, the supervisor publishes an
-emergency or blocked decision depending on the configured logic.
+---
 
-If required health topics fail, become stale, or are not received, the supervisor blocks commands
-and reports a failsafe/hold reason.
+## 📡 Interfaces
 
-If ManagementNode marks a non-critical module planned inactive, the supervisor should not treat that
-as an unexpected failure.
+| | Topic/Service | Type | Description |
+|---|---|---|---|
+| **Sub** | `/safety/status` | `SafetyStatus` | Braking distance & obstacle verdict. |
+| **Sub** | `/health/status` | `HealthStatus` | Individual topic health reports. |
+| **Sub** | `/management/state` | `ManagementState` | Mission active flag & planned inactive lists. |
+| **Sub** | `/network_status` | `std_msgs/String` | Network link state (`NETWORK_HEALTHY`, `LOST`, etc.). |
+| **Pub** | `/supervisor/status` | `SupervisorStatus` | **Global System Mode** & Command Authorization. |
+| **Pub** | `/supervisor/heartbeat` | `std_msgs/String` | Node liveliness with Deadline/Liveliness QoS. |
+| **Srv** | `/supervisor/reset_emergency_stop` | `std_srvs/Trigger` | Clears latched E-Stop (only if system is safe). |
 
-## Failure Behavior
-
-If `/safety/status` becomes stale or is missing, the supervisor should block commands because the
-latest safety decision is not trustworthy.
-
-If `/health/status` becomes stale or required health topics fail, the supervisor should block
-commands or enter failsafe.
-
-If `/management/state` becomes stale, the supervisor should avoid trusting planned inactive/runtime
-registry state and should fail safe or hold according to the supervisor logic.
-
-If a critical module is planned inactive during an active mission, the supervisor should prevent
-normal operation.
-
-## Responsibility Boundary
-
-The supervisor does not:
-
-- read raw LiDAR scans
-- calculate braking distance
-- publish sensor health directly
-- manage runtime registration
-- run mission sequencing
-- control PX4/ArduPilot directly
-- contain dashboard logic
-
-Those responsibilities belong to other packages:
-
-```text
-HealthMonitor = health detection
-SafetyFusion = safety calculation
-ManagementNode = mission/maintenance/registration state
-Supervisor = final system decision
-Dashboard = visualization and operator commands
+```mermaid
+classDiagram
+    class SupervisorStatus {
+        +uint8 mode
+        +uint8 reason
+        +bool command_allowed
+        +string message
+    }
+    mode : UNKNOWN=0, NORMAL=1, HOLD=2, FAILSAFE=3, EMERGENCY_STOP=4
+    reason : REASON_NONE, REASON_OBSTACLE_TOO_CLOSE, REASON_SAFETY_STATUS_STALE, REASON_NETWORK_UNHEALTHY, ...
 ```
+
+---
+
+## 🌟 Why It's Reusable
+
+| Feature | Benefit |
+|---|---|
+| **Latched Emergency Stop** | Once triggered by an obstacle, the system stays stopped until explicitly reset *and* verified safe. |
+| **Network Grace Period** | Distinguishes between temporary packet loss (`HOLD`) and total comms failure (`FAILSAFE`) via configurable delay. |
+| **Dynamic Health Awareness** | Automatically ignores health failures for topics marked `PLANNED_INACTIVE` by the Management Node. |
+| **Deterministic Liveliness** | Uses manual DDS liveliness assertion so downstream nodes detect supervisor crashes instantly. |
+
+```mermaid
+graph LR
+    Inputs[Safety + Health + Net + Mgmt] --> Supervisor[Supervisor Engine]
+    Supervisor -->|Command Allowed?| Autonomy[Mission Control / Pilot]
+    Supervisor -->|Mode Update| Dashboard[HMI / Logging]
+```
+
+---
+
+## 🔄 Global Mode State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> UNKNOWN: Startup (Waiting for inputs)
+    UNKNOWN --> NORMAL: All inputs fresh, Safe, Healthy
+    NORMAL --> HOLD: Maintenance Mode OR Non-Critical Health Fail
+    NORMAL --> FAILSAFE: Input Timeout OR Network Lost (>delay)
+    NORMAL --> EMERGENCY_STOP: Obstacle Too Close
+    
+    HOLD --> NORMAL: Conditions cleared
+    FAILSAFE --> NORMAL: Inputs restored
+    FAILSAFE --> [*]: Critical Failure
+    
+    EMERGENCY_STOP --> EMERGENCY_STOP: Latched
+    EMERGENCY_STOP --> HOLD: Reset Service Called (if Safe)
+    
+    note right of EMERGENCY_STOP
+      Requires explicit service call
+      to clear latch. Cannot auto-recover.
+    end note
+```
+
+---
+
+## 📊 Mode Decision Logic
+
+| Current Condition | Resulting Mode | Command Allowed? | Reason Code |
+|---|---|---|---|
+| Missing Safety/Health/Net data (Timeout) | **FAILSAFE** | ❌ No | `REASON_..._STALE` |
+| Safety Status = `UNSAFE` (Obstacle) | **EMERGENCY_STOP** | ❌ No | `REASON_OBSTACLE_TOO_CLOSE` |
+| E-Stop Latched (Pending Reset) | **EMERGENCY_STOP** | ❌ No | `REASON_OBSTACLE_TOO_CLOSE` |
+| Required Health Topic Failed | **HOLD** (or FAILSAFE if mission active) | ❌ No | `REASON_REQUIRED_HEALTH_FAILED` |
+| Network Lost (> `failsafe_delay_ms`) | **FAILSAFE** | ❌ No | `REASON_NETWORK_UNHEALTHY` |
+| Network Lost (< `failsafe_delay_ms`) | **HOLD** | ❌ No | `REASON_NETWORK_UNHEALTHY` |
+| Maintenance Mode Active | **HOLD** | ❌ No | `REASON_MAINTENANCE_MODE` |
+| All Systems Green | **NORMAL** | ✅ **Yes** | `REASON_NONE` |
+
+---
+
+## 🛠️ Build & Run
+
+```bash
+# Build
+colcon build --packages-select drone_health_core
+source install/setup.bash
+
+# Run
+ros2 run drone_health_core supervisor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/supervisor/supervisor.yaml
+
+# Debug
+ros2 topic echo /supervisor/status
+ros2 service call /supervisor/reset_emergency_stop std_srvs/srv/Trigger "{}"
+```
+
+---
+
+## 📦 Dependencies
+
+```mermaid
+graph LR
+    Node["supervisor_node"]
+    Node --> drone_health_interfaces
+    Node --> rclcpp
+    Node --> std_srvs
+    Node --> std_msgs
+```
+
+---
+
+## 📄 License
+
+MIT License. Free to use for academic and commercial projects.

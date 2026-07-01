@@ -1,121 +1,156 @@
-# management_node
+# 🛠️ ROS 2 Drone Health Management Node
 
-## Purpose
+[![ROS 2](https://img.shields.io/badge/ROS_2-Humble%20%7C%20Iron%20%7C%20Jazzy-blue)](https://docs.ros.org/)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-purple.svg)](https://en.cppreference.com/w/cpp/17)
 
-Central ROS node for high-level system management.
+A robust, central management node for autonomous drone systems that coordinates operational states, validates mission execution constraints, and tracks the dynamic lifecycle of hardware and software modules.
 
-ManagementNode handles operator/module requests such as mission state, maintenance mode, planned
-inactive modules, runtime registration, and planned deregistration.
+Situated at the core of the system autonomy stack, the Management Node acts as the definitive gatekeeper between system diagnostics (health monitoring/supervision) and mission execution. It ensures that operations never commence or continue under degraded, unmonitored, or unsafe conditions.
 
-It does not perform safety calculations and does not run mission sequencing.
+---
 
-## Inputs
+## 🏗️ System Architecture
 
-- `/supervisor/status` (`drone_health_interfaces/msg/SupervisorStatus`)
-- service calls from operators, dashboard, or runtime modules
-- parameters from `management.yaml`
+The Management Node acts as the central state machine and interlock engine between high-level mission control, dynamic hardware/software modules, and downstream health monitors.
 
-## Outputs
+```mermaid
+graph LR
+    subgraph Inputs [External Inputs]
+        SUP[/supervisor/status/]
+        SRV[ROS 2 Services<br/>Mission / Maintenance / Modules]
+    end
 
-- `/management/state` (`drone_health_interfaces/msg/ManagementState`)
-- `/management/heartbeat` (`std_msgs/msg/String`)
+    subgraph Core [Management Node]
+        REG[Module Registry<br/>YAML + Runtime]
+        LOCK[Safety Interlock &<br/>State Decision Engine]
+    end
 
-## Parameters
+    subgraph Outputs [Downstream & Health]
+        STATE[/management/state<br/>5 Hz Reliable/]
+        HB[/management/heartbeat<br/>Liveliness QoS/]
+    end
 
-Configured in `management.yaml`.
+    SUP -->|State & Timeout Check| LOCK
+    SRV -->|Registration Requests| REG
+    SRV -->|State Change Requests| LOCK
+    REG -->|Critical Module Status| LOCK
+    LOCK -->|Publish State| STATE
+    LOCK -->|Assert Liveliness| HB
+```
 
-Important parameters:
+### Data Flow Overview
+1. **Input Validation:** Subscribes to `/supervisor/status` and checks against `supervisor_status_timeout_ms` to ensure command authority is fresh and active.
+2. **Registry Evaluation:** Cross-references service requests against static YAML configurations and runtime-registered modules to track critical dependencies.
+3. **Interlock Enforcement:** Blocks invalid state transitions (such as starting a mission with broken critical modules or entering maintenance mid-flight).
+4. **Deterministic Output:** Broadcasts unified system state at **5 Hz** to `/management/state` while asserting manual QoS liveliness to `/management/heartbeat`.
 
-- `supervisor_status_topic`
-- `supervisor_status_timeout_ms`
-- `module_ids`
-- `<module>.critical`
-- `<module>.topics`
+---
 
-## Run command
+## ✨ Key Features
 
+* **🛡️ Mission Safety Interlocks:** Strictly prevents mission initiation if the system is in maintenance mode, if any **critical** module/topic is marked inactive, or if the high-level Supervisor node denies command permission or times out.
+* **🔌 Hybrid Module Registration:** Supports both static compile/YAML-time module declaration and dynamic runtime registration/deregistration via ROS 2 services, allowing flexible system reconfiguration.
+* **⏸️ Planned Inactivity Management:** Safely handles expected module downtime (e.g., `optional_disabled`, `maintenance`, `mission_not_required`) without triggering system-wide safety aborts—unless the module is deemed critical during an active mission.
+* **💓 Liveliness & Deadline QoS:** Publishes deterministic, high-frequency state updates (`5 Hz`) and asserts manual topic liveliness (`1500 ms` lease, `700 ms` deadline) to prove operational continuity to downstream monitors.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Build the Package
+```bash
+colcon build --packages-select drone_health_core
+source install/setup.bash
+```
+
+### 2. Run the Node with Configuration
 ```bash
 ros2 run drone_health_core management_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/management/management.yaml
 ```
 
-## Main Services
-
-```text
-/management/set_mission_active
-/management/set_maintenance_mode
-/management/set_module_inactive
-/management/register_module
-/management/deregister_module
+### 3. Monitor System Management State
+```bash
+ros2 topic echo /management/state
 ```
 
-## Expected Behavior
+---
 
-ManagementNode publishes the current management state, including:
+## 🧠 Mission Interlock & Decision Logic
 
-- `mission_active`
-- `maintenance_mode`
-- known runtime registry modules
-- active modules
-- planned inactive modules
-- planned inactive topics
+The node enforces strict rules before allowing state transitions or module alterations during flight:
 
-Operators and modules should normally use module-level commands. ManagementNode maps modules to
-topics using YAML configuration or runtime registration metadata.
+| Requested Action | Condition | Result | Output Reason |
+| :--- | :--- | :--- | :--- |
+| `set_mission_active(true)` | System is in Maintenance Mode | ❌ **Rejected** | `cannot start mission while maintenance mode is active` |
+| `set_mission_active(true)` | Any Critical Module/Topic is Planned Inactive | ❌ **Rejected** | `cannot start mission while critical module/topic is planned inactive` |
+| `set_mission_active(true)` | Supervisor heartbeat stale or command disallowed | ❌ **Rejected** | `cannot start mission because supervisor does not allow command` |
+| `set_module_inactive(true)` | Module is `critical` AND Mission is Active | ❌ **Rejected** | `cannot mark critical module inactive during active mission` |
+| `set_maintenance_mode(true)` | Mission is currently Active | ❌ **Rejected** | `cannot enable maintenance mode during active mission` |
 
-## Runtime Registration
+---
 
-Runtime registration allows a new module to join while the ROS system is already running.
+## ⚙️ Configuration Guide
 
-A node calls `/management/register_module` with:
+Configure baseline system modules, criticalities, and supervisor timeouts via YAML:
 
-- `module_name`
-- `critical`
-- `heartbeat_topic`
-- `heartbeat_type`
-- `heartbeat_deadline_ms` or `heartbeat_liveliness_ms`
-- optional `data_topics`
-- optional `data_topic_types`
+```yaml
+management_node:
+  ros__parameters:
+    supervisor_status_topic: /supervisor/status
+    supervisor_status_timeout_ms: 1000
 
-ManagementNode stores this in the runtime registry and publishes it through `/management/state`.
+    module_ids:
+      - lidar
+      - flow
+      - safety
+      - health
+      - supervisor
+      - camera
 
-## Runtime Deregistration
+    # Critical sensor required for flight
+    lidar.critical: true
+    lidar.topics:
+      - /lidar/scan
+      - /lidar/heartbeat
+      - /lidar/nearest_obstacle
 
-Runtime deregistration allows a module to officially leave while ROS is running.
-
-A node calls `/management/deregister_module`.
-
-If approved, ManagementNode marks the module as planned inactive with reason `deregistered`.
-HealthMonitor then reports `INACTIVE / DEREGISTERED` instead of false failure.
-
-## Failure Behavior
-
-If a critical module is requested inactive or deregistered during an active mission, ManagementNode
-rejects the request.
-
-If a module disappears without deregistration, ManagementNode state does not change. HealthMonitor
-reports stale/failure.
-
-## Responsibility Boundary
-
-ManagementNode should not contain:
-
-- waypoint logic
-- return-home logic
-- behavior tree logic
-- mission sequencing
-- obstacle/speed safety calculation
-- dashboard decision logic
-
-Those belong to future autonomy, PX4/ArduPilot, behavior trees, mission systems, SafetyFusion,
-Supervisor, or dashboard.
-
-## Management State Meaning
-
-```text
-registry_* = known module/topic metadata in current runtime
-active_* = currently active / expected online
-planned_inactive_* = intentionally inactive
+    # Non-critical payload module
+    camera.critical: false
+    camera.topics:
+      - /camera/image_raw
+      - /camera/heartbeat
 ```
 
-Dashboard should show a clean module summary. It does not need to display all topic metadata by
-default.
+### Parameter Definitions
+| Parameter | Description |
+| :--- | :--- |
+| `supervisor_status_topic` | Topic where the high-level system supervisor publishes state reports. |
+| `supervisor_status_timeout_ms`| Max allowed age of supervisor status before mission commands are locked out. |
+| `module_ids` | List of string identifiers for statically configured system modules. |
+| `<id>.critical` | Whether the module's health is strictly required to start/maintain missions. |
+| `<id>.topics` | List of ROS 2 topics associated with this specific hardware/software module. |
+
+---
+
+## 📡 ROS 2 Interfaces
+
+### Subscriptions & Publishers
+| Topic | Type | Direction | Description |
+| :--- | :--- | :--- | :--- |
+| `/supervisor/status` | `SupervisorStatus` | **In** | High-level system state and mission authorization. |
+| `/management/state` | `ManagementState` | **Out** | Comprehensive status of all managed modules, reasons, and mission flags (`5 Hz`). |
+| `/management/heartbeat` | `std_msgs/String` | **Out** | Node health heartbeat with deadline (`700ms`) and manual liveliness QoS (`1500ms`). |
+
+### Services Exposed
+| Service Name | Service Type | Description |
+| :--- | :--- | :--- |
+| `/management/set_maintenance_mode` | `std_srvs/SetBool` | Toggles system maintenance mode (blocked during active missions). |
+| `/management/set_mission_active` | `std_srvs/SetBool` | Requests mission start/stop (subject to safety interlocks). |
+| `/management/set_module_inactive` | `SetModuleInactive` | Temporarily suppresses health warnings for a registered module. |
+| `/management/register_module` | `RegisterModule` | Dynamically registers a new module and its topic QoS specifications at runtime. |
+| `/management/deregister_module` | `DeregisterModule` | Gracefully removes or deactivates a module from active system supervision. |
+
+---
+
+## 📄 License
+MIT License. Free to use for academic and commercial robotics projects.
