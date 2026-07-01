@@ -87,7 +87,7 @@ When both example nodes run alongside the core framework, you can observe the fo
 3. **Graceful Payload Exit (`55s+`)**: 
    * Phase transitions to `INSPECTION_COMPLETE`.
    * The camera detects task completion and calls `/management/set_module_inactive` with `reason: "deregistered"`.
-   * The camera shuts down cleanly. Downstream monitors show `PLANNED_INACTIVE` rather than a system error.
+   * The camera shuts down cleanly. Management shows the camera as `PLANNED_INACTIVE`, and the dashboard removes camera health tiles instead of showing a false failure.
 4. **Mission Continuation**: 
    * Phase updates to `NAVIGATION_CONTINUE`. The drone continues flight without triggering safety alarms over the missing camera.
 

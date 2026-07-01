@@ -41,9 +41,9 @@ graph TD
 ## 🚀 Quick Start
 
 ```bash
-colcon build --packages-select drone_health_supervisor
+colcon build --packages-select drone_health_core
 source install/setup.bash
-ros2 run drone_health_supervisor supervisor_node --ros-args --params-file config.yaml
+ros2 run drone_health_core supervisor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/supervisor/supervisor.yaml
 ```
 
 ```yaml
@@ -167,11 +167,11 @@ stateDiagram-v2
 
 ```bash
 # Build
-colcon build --packages-select drone_health_supervisor
+colcon build --packages-select drone_health_core
 source install/setup.bash
 
 # Run
-ros2 run drone_health_supervisor supervisor_node --ros-args --params-file config.yaml
+ros2 run drone_health_core supervisor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/supervisor/supervisor.yaml
 
 # Debug
 ros2 topic echo /supervisor/status

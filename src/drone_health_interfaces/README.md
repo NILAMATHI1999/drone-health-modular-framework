@@ -139,9 +139,9 @@ graph TD
     Interfaces["drone_health_interfaces"]
 
     Interfaces --> Core["drone_health_core"]
-    Interfaces --> Safety["safety_fusion_pkg"]
-    Interfaces --> Dashboard["dashboard"]
-    Interfaces --> Examples["examples"]
+    Interfaces --> Safety["drone_health_safety_example"]
+    Interfaces --> Dashboard["drone_health_dashboard"]
+    Interfaces --> Examples["drone_health_examples"]
     Interfaces --> Registrable["registrable modules"]
 ```
 

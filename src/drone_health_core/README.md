@@ -73,11 +73,11 @@ sequenceDiagram
     Sup->>Sup: Evaluate required_health_topics
     Sup-->>Mod: /supervisor/status (NORMAL, command_allowed=true)
 
-    Mod->>Mgmt: set_module_inactive(reason=maintenance)
-    Mgmt-->>HM: /management/state (planned_inactive_topics)
-    HM-->>Sup: /health/status (INACTIVE)
-    Sup->>Sup: Skip inactive topic in health check
-    Sup-->>Mod: /supervisor/status (still NORMAL)
+    Mod->>Mgmt: deregister_module(reason=deregistered)
+    Mgmt-->>HM: /management/state (planned_inactive_topics/modules)
+    HM->>HM: Remove runtime subscriptions for planned-inactive module
+    Mgmt-->>Sup: /management/state (planned inactive context)
+    Sup-->>Mod: /supervisor/status (mission decision updated)
 ```
 
 ---
@@ -88,9 +88,9 @@ sequenceDiagram
 | Capability | Detail |
 |---|---|
 | Static monitoring | YAML-configured typed subscriptions at startup |
-| Dynamic monitoring | Runtime `GenericSubscription` spawned from `/management/state` |
+| Dynamic monitoring | Runtime `GenericSubscription` spawned from `/management/state` for heartbeat and data topics |
 | Fault detection | DDS QoS deadline/liveliness events **+** software timeout fallback (100ms) |
-| Mission awareness | Marks `PLANNED_INACTIVE` topics as `INACTIVE`, not `FAILED` |
+| Mission awareness | Ignores planned-inactive topics/modules so expected downtime is not reported as a failure |
 | Output | `/health/status` per-topic health report |
 
 ### 🛡️ Management Node
@@ -182,11 +182,11 @@ Runtime registration allows optional modules to join while ROS is already runnin
 graph LR
     Node["Registrable Node"] -->|register_module / deregister_module| Mgmt["Management Node"]
     Mgmt -->|/management/state| HM["Health Monitor"]
-    HM -->|Spawns/Removes Heartbeat Monitor| Mgmt
+    HM -->|Spawns/Removes Runtime Monitors| Mgmt
     Mgmt -->|/management/state| Sup["Supervisor / Dashboard"]
 ```
 
-> **Note:** Runtime registration currently adds dynamic **heartbeat** monitoring only. Data topics are stored as registry metadata for dashboard/future extension, but generic runtime data-topic monitoring is future work.
+> **Note:** Runtime registration publishes a complete `MonitorSpec[]` for the module. Health Monitor creates generic runtime subscriptions for both heartbeat and data topics, so future message types can be monitored for arrival/timeout without recompiling Health Monitor.
 
 ---
 

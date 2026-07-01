@@ -35,7 +35,7 @@ graph TD
     Active -.->|"mission complete trigger"| Dereg
     Dereg -->|"/management/deregister_module"| MN
     MN -->|"planned_inactive added"| HM
-    HM -->|"status = INACTIVE"| Shutdown
+    HM -->|"runtime monitors removed"| Shutdown
     Dereg --> Shutdown
 ```
 
@@ -51,7 +51,7 @@ This package teaches the correct pattern for:
 - ✅ Runtime registration via `RegisterModule.srv`
 - ✅ Planned deregistration via `DeregisterModule.srv`
 - ✅ Graceful, approved shutdown (not just `Ctrl+C`)
-- ✅ Demonstrating the difference between a **crash** (STALE/ERROR) and a **planned exit** (INACTIVE)
+- ✅ Demonstrating the difference between a **crash** (STALE/ERROR) and a **planned exit** (planned inactive, no false failure)
 
 ---
 
@@ -74,7 +74,7 @@ This is an **example/template only** — it contains no core monitoring logic.
 |---|---|
 | **Registrable Node** *(this package)* | Calls register/deregister services; publishes its own heartbeat/data. |
 | **Management Node** | Approves/rejects registration; tracks runtime registry & planned inactive state. |
-| **Health Monitor** | Subscribes dynamically to the registered heartbeat; reports `OK` / `STALE` / `INACTIVE`. |
+| **Health Monitor** | Subscribes dynamically to registered heartbeat/data topics; reports `OK` / `STALE` / `ERROR` while active and removes runtime monitors when planned inactive. |
 | **Dashboard** | Visualizes the resulting module status. |
 
 ---
@@ -89,8 +89,8 @@ source install/setup.bash
 
 ### 2. Start Core Nodes First
 ```bash
-ros2 run drone_health_core management_node --ros-args --params-file management.yaml
-ros2 run drone_health_core health_monitor_node --ros-args --params-file health_monitor.yaml
+ros2 run drone_health_core management_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/management/management.yaml
+ros2 run drone_health_core health_monitor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/health_monitor/health_monitor.yaml
 ```
 
 ### 3. Run the Template Node
@@ -100,7 +100,7 @@ ros2 run drone_health_registrable_template registrable_template_node
 
 ### 4. Trigger Planned Deregistration
 ```bash
-ros2 service call /template/request_deregister std_srvs/srv/Trigger
+ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
 ```
 
 ---
@@ -139,8 +139,8 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger
 
 | Scenario | Management Node State | Health Monitor Verdict |
 |---|---|---|
-| **Normal startup** | Module added to `registry_modules` / `active_modules` | `OK` once first heartbeat arrives |
-| **`request_deregister` called** | Module moved to `planned_inactive_modules` (`reason: deregistered`) | `INACTIVE` |
+| **Normal startup** | Module appears in `managed_modules` | `OK` once first heartbeat/data messages arrive |
+| **`request_deregister` called** | Module appears in `planned_inactive_modules` (`reason: deregistered`) | Runtime health tiles are removed; no false failure is shown |
 | **Node killed (`Ctrl+C`/crash)** *without deregistering* | No state change — module still "active" | `STALE` (timeout) or `ERROR` (deadline/liveliness lost) |
 
 ---
@@ -149,10 +149,9 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger
 
 **Currently Supported:**
 - ✅ Runtime heartbeat monitoring (auto-spawned `GenericSubscription`)
-- ✅ Data topics stored as registry metadata for dashboards
+- ✅ Runtime data-topic monitoring with generic subscriptions
 
 **Future Work:**
-- 🔲 Generic dynamic **data-topic** health monitoring (currently heartbeat-only)
 - 🔲 Multi-topic deregistration granularity (per-topic vs per-module)
 
 Use this template as a starting point for:

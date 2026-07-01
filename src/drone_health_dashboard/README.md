@@ -111,7 +111,7 @@ flowchart TD
 |---|---|---|
 | Supervisor | 1.5s | Mode → `STALE`, color → red |
 | Safety | 1.5s | State → `STALE`, color → red |
-| Management | 2.0s | Reason → `STALE` |
+| Management | 2.0s | Management sections show `STALE` instead of cached values |
 | Health | 2.0s | All entries → `STALE`, color → gray, logs one event |
 | Network | 3.0s | Status → `STALE` |
 | Obstacle/Velocity | 1.5s | Metric → `null` (hidden) |
@@ -165,7 +165,7 @@ graph LR
     Bridge -.->|"never computes"| Decision
 ```
 
-All `SAFE/UNSAFE`, `NORMAL/HOLD/FAILSAFE`, and health status decisions are made **upstream** by the core ROS nodes. This package only translates ROS messages into JSON for human viewing and forwards user commands as service calls.
+All `SAFE/UNSAFE`, `NORMAL/HOLD/FAILSAFE`, and health status decisions are made **upstream** by the core ROS nodes. This package only translates ROS messages into JSON for human viewing; it does not issue commands or make safety decisions.
 
 ---
 

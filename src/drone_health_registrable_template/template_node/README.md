@@ -17,6 +17,7 @@ network, payload, or inspection modules.
 ## Outputs
 
 - `/template/heartbeat` (`std_msgs/msg/String`)
+- `/template/value` (`std_msgs/msg/Float32`, optional example data topic)
 
 ## Parameters
 
@@ -28,6 +29,9 @@ Typical parameters:
 - `publish_period_ms`
 - `heartbeat_deadline_ms`
 - `heartbeat_liveliness_ms`
+- `publish_data_topic`
+- `data_topic`
+- `data_deadline_ms`
 
 ## Run command
 
@@ -38,7 +42,7 @@ ros2 run drone_health_registrable_template registrable_template_node
 Request planned deregistration:
 
 ```bash
-ros2 service call /template/request_deregister std_srvs/srv/Trigger
+ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
 ```
 
 ## Runtime Registration Flow
@@ -46,9 +50,9 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger
 ```text
 node starts
 -> calls /management/register_module
--> sends module name, critical flag, heartbeat topic, heartbeat type, and heartbeat QoS timing
+-> sends module name, critical flag, and full MonitorSpec list for heartbeat plus optional data topic
 -> ManagementNode adds the module to the runtime registry
--> HealthMonitor dynamically monitors the heartbeat
+-> HealthMonitor dynamically monitors the registered heartbeat/data topics
 -> dashboard can show the module as active
 ```
 
@@ -59,7 +63,7 @@ operator or node requests planned shutdown
 -> node calls /management/deregister_module
 -> ManagementNode approves or rejects
 -> if approved, node stops publishing and shuts down
--> HealthMonitor shows INACTIVE / DEREGISTERED
+-> HealthMonitor removes runtime subscriptions; dashboard removes the module health tiles
 ```
 
 ## Expected Behavior
@@ -68,17 +72,14 @@ After startup:
 
 ```text
 /template/heartbeat -> OK
-template_node appears in registry_modules
-template_node appears in active_modules
+template_node appears in managed_modules
 ```
 
 After planned deregistration:
 
 ```text
-template_node remains in registry_modules
-template_node is removed from active_modules
 template_node appears in planned_inactive_modules
-/template/heartbeat appears as INACTIVE / DEREGISTERED
+/template/heartbeat and /template/value health tiles are removed from the dashboard
 ```
 
 ## Failure Behavior
@@ -86,7 +87,7 @@ template_node appears in planned_inactive_modules
 Ctrl+C, crash, or power loss does not call deregistration. ManagementNode state does not change and
 HealthMonitor reports stale/deadline/liveliness failure.
 
-Planned deregistration asks ManagementNode first and produces `INACTIVE / DEREGISTERED` instead of
+Planned deregistration asks ManagementNode first and produces planned inactive state instead of
 failure.
 
 ## QoS Rule
@@ -103,8 +104,6 @@ publisher must also use deadline 500 ms
 If the node registers QoS that does not match its actual publisher QoS, HealthMonitor may report
 `QOS_INCOMPATIBLE`, `DEADLINE_MISSED`, or `LIVELINESS_LOST`.
 
-## Current Limitation
+## Runtime Data Monitoring
 
-This template dynamically monitors the heartbeat.
-
-Data topics are registered as metadata, but generic runtime data-topic monitoring is future work.
+This template dynamically registers and publishes both a heartbeat topic and an optional Float32 data topic. HealthMonitor monitors both through generic runtime subscriptions.

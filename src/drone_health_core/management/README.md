@@ -59,13 +59,13 @@ graph LR
 
 ### 1. Build the Package
 ```bash
-colcon build --packages-select drone_health_management
+colcon build --packages-select drone_health_core
 source install/setup.bash
 ```
 
 ### 2. Run the Node with Configuration
 ```bash
-ros2 run drone_health_management management_node --ros-args --params-file config/management_params.yaml
+ros2 run drone_health_core management_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/management/management.yaml
 ```
 
 ### 3. Monitor System Management State

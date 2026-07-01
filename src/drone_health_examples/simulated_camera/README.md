@@ -108,10 +108,7 @@ ros2 service call /camera/request_deregister std_srvs/srv/Trigger "{}"
 # Watch the camera stop publishing
 ros2 topic hz /camera/image_raw
 
-# Watch the Health Monitor update the status to INACTIVE (not STALE/ERROR)
-ros2 topic echo /health/status | grep -A 5 "camera"
-
-# Watch the Management Node record the planned inactive state
+# Watch Management record planned inactive and the dashboard remove camera health tiles
 ros2 topic echo /management/state
 ```
 
@@ -124,7 +121,7 @@ This node is specifically designed to teach the difference between a **fault** a
 | Scenario | What Happens | Health Monitor Verdict |
 |---|---|---|
 | **Node Crashes / Killed** | Heartbeat and images stop abruptly. | 🔴 **STALE / ERROR** (Triggers Supervisor HOLD/FAILSAFE if critical) |
-| **Graceful Deregistration** | Node calls `set_module_inactive` before stopping. | 🟢 **INACTIVE** (Silenced, no Supervisor fault triggered) |
+| **Graceful Deregistration** | Node calls `set_module_inactive` before stopping. | Management marks camera planned inactive; dashboard removes camera health tiles so no false alarm is shown. |
 
 ---
 
@@ -135,7 +132,7 @@ In a physical drone, this pattern is used for:
 * **Removable inspection cameras** that power down after a specific waypoint is reached to save battery.
 * **Secondary communication links** that are only active in certain geographic zones.
 
-By using the `set_module_inactive` service, the autonomy stack ensures the safety supervisor doesn't panic when these expected hardware changes occur.
+By using the `set_module_inactive` service, the autonomy stack tells Management that this is expected downtime. Because the camera is statically configured in YAML, rerunning it after deregistration requires an operator restore command before Health Monitor treats it as active again.
 
 ---
 

@@ -96,7 +96,7 @@ graph TD
 ### 0. Prerequisites
 
 ```bash
-cd ~/ros2_ws
+cd /home/nila/Desktop/drone_health_modular_ws
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
