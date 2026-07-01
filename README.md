@@ -12,69 +12,81 @@ A comprehensive, modular ROS 2 framework for autonomous drone health monitoring,
 
 ```mermaid
 graph TD
-    subgraph Sensors ["Sensor Layer"]
-        LIDAR["📡 simulated_lidar_driver_node<br/>/lidar/scan"]
-        FLOW["🌊 simulated_flow_sensor_node<br/>/vehicle/velocity"]
+
+    subgraph PKG_INTERFACES ["📦 drone_health_interfaces"]
+        MSG1["HealthStatus.msg"]
+        MSG2["ManagementState.msg"]
+        MSG3["MonitorSpec.msg"]
+        SRV1["RegisterModule.srv"]
+        SRV2["DeregisterModule.srv"]
     end
 
-    subgraph Processing ["Processing Layer"]
-        LPROC["⚙️ lidar_obstacle_processor_node<br/>/lidar/nearest_obstacle"]
+    subgraph PKG_LIDAR ["📦 drone_health_lidar_example"]
+        LIDAR["simulated_lidar_driver_node<br/>/lidar/scan, /lidar/heartbeat"]
+        LPROC["lidar_obstacle_processor_node<br/>/lidar/nearest_obstacle,<br/>/lidar_obstacle_processor/heartbeat"]
     end
 
-    subgraph Safety ["Safety & Health Layer"]
-        SF["🛡️ safety_fusion_node<br/>Kinematic Braking Math"]
-        HM["🏥 health_monitor_node<br/>QoS + Timeout Engine"]
+    subgraph PKG_FLOW ["📦 drone_health_flow_example"]
+        FLOW["simulated_flow_sensor_node<br/>/vehicle/velocity, /flow/heartbeat"]
     end
 
-    subgraph Management ["Management Layer"]
-        MN["🎛️ management_node<br/>Module Registry + State Machine"]
-        SV["🧠 supervisor_node<br/>Go/No-Go Decision"]
+    subgraph PKG_SAFETY ["📦 drone_health_safety_example"]
+        SF["safety_fusion_node<br/>Kinematic Braking Math<br/>/safety_fusion/heartbeat"]
     end
 
-    subgraph Optional ["Optional Modules"]
-        CAM["📷 simulated_camera_node<br/>Optional Payload"]
-        MM["🚀 mission_manager_node<br/>Flight Executive"]
-        TEMPLATE["🔌 registrable_template_node<br/>Runtime Registration Demo"]
+    subgraph PKG_CORE ["📦 drone_health_core"]
+        MN["management_node<br/>Module Registry + State Machine<br/>/management/state"]
+        HM["health_monitor_node<br/>QoS + Timeout Engine<br/>/health/status"]
+        SV["supervisor_node<br/>Go/No-Go Decision<br/>/supervisor/heartbeat"]
     end
 
-    subgraph Network ["Network Layer"]
-        WIFI["📶 wifi_monitor_node"]
-        LTE["📡 lte_monitor_node"]
-        HILINK["🔌 at_hilink_adapter_node"]
-        MODEM["🔧 at_modem_monitor_node"]
-        NF["network_fusion_node<br/>/network_status"]
+    subgraph PKG_NETWORK ["📦 drone_health_network_example"]
+        WIFI["wifi_monitor_node<br/>/network/wifi/heartbeat"]
+        LTE["lte_monitor_node<br/>/network/lte/heartbeat"]
+        HILINK["at_hilink_adapter_node<br/>/network/at_hilink/heartbeat"]
+        MODEM["at_modem_monitor_node<br/>/network/at_lte/heartbeat"]
+        NF["network_fusion_node<br/>/network/status, /network/heartbeat"]
     end
 
-    subgraph Dashboard ["Dashboard Layer"]
-        DASH["🖥️ dashboard_bridge.py<br/>SSE Stream on :8080"]
+    subgraph PKG_EXAMPLES ["📦 drone_health_examples"]
+        MM["mission_manager_node<br/>Flight Executive"]
+        CAM["simulated_camera_node<br/>/camera/image_raw,<br/>/camera/heartbeat"]
     end
 
-    %% Original correct arrows
+    subgraph PKG_TEMPLATE ["📦 drone_health_registrable_template"]
+        TEMPLATE["registrable_template_node<br/>Runtime Registration Demo"]
+    end
+
+    subgraph PKG_DASHBOARD ["📦 drone_health_dashboard"]
+        DASH["dashboard_bridge.py<br/>SSE Stream on :8080"]
+    end
+
+    %% ---- Sensor to Processing ----
     LIDAR --> LPROC
+
+    %% ---- Processing/Sensors to Safety ----
     LPROC --> SF
     FLOW --> SF
+
+    %% ---- Safety to Supervisor ----
     SF --> SV
-    HM --> SV
+
+    %% ---- Management orchestration ----
     MN --> HM
     MN --> SV
-    NF --> SV
-    CAM --> HM
+    MN --> SF
+    MM --> MN
     CAM --> MN
     TEMPLATE --> MN
-    TEMPLATE --> HM
-    MM --> MN
+
+    %% ---- Network fusion to Supervisor ----
+    NF --> SV
     WIFI --> NF
     LTE --> NF
     HILINK --> NF
     MODEM --> NF
-    SV --> DASH
-    SF --> DASH
-    HM --> DASH
-    MN --> DASH
-    NF --> DASH
 
-    %% Missing arrows added
-    MN --> SF
+    %% ---- Everything reports health status to HM ----
     LIDAR --> HM
     FLOW --> HM
     LPROC --> HM
@@ -85,6 +97,28 @@ graph TD
     LTE --> HM
     HILINK --> HM
     MODEM --> HM
+    CAM --> HM
+    TEMPLATE --> HM
+
+    %% ---- Dashboard aggregates everything ----
+    SV --> DASH
+    SF --> DASH
+    HM --> DASH
+    MN --> DASH
+    NF --> DASH
+
+    %% ---- Interfaces dependency (compile-time, dashed) ----
+    PKG_INTERFACES -.->|msg/srv types| PKG_CORE
+    PKG_INTERFACES -.->|msg/srv types| PKG_LIDAR
+    PKG_INTERFACES -.->|msg/srv types| PKG_FLOW
+    PKG_INTERFACES -.->|msg/srv types| PKG_SAFETY
+    PKG_INTERFACES -.->|msg/srv types| PKG_NETWORK
+    PKG_INTERFACES -.->|msg/srv types| PKG_EXAMPLES
+    PKG_INTERFACES -.->|msg/srv types| PKG_TEMPLATE
+
+    style PKG_INTERFACES fill:#fff3cd,stroke:#856404
+    style PKG_CORE fill:#d1ecf1,stroke:#0c5460
+    style PKG_DASHBOARD fill:#e2d9f3,stroke:#5a3d99
 ```
 
 ---
