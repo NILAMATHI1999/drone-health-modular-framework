@@ -9,7 +9,6 @@
         - safety
         - health
         - supervisor
-        - camera
         - network
 
       lidar.critical: true
@@ -38,10 +37,6 @@
         - /supervisor/status
         - /supervisor/heartbeat
 
-      camera.critical: false
-      camera.topics:
-        - /camera/image_raw
-        - /camera/heartbeat
 
       network.critical: false
       network.topics:

@@ -12,8 +12,6 @@ health_monitor_node:
         - vehicle_velocity
         - safety_fusion_heartbeat
         - supervisor_heartbeat
-        - camera_image
-        - camera_heartbeat
         - management_heartbeat
         - wifi_heartbeat
         - lte_heartbeat
@@ -93,23 +91,6 @@ health_monitor_node:
       vehicle_velocity.reliability: best_effort
       vehicle_velocity.deadline_ms: 200
       vehicle_velocity.timeout_ms: 500
-
-      camera_image.node_name: simulated_camera_node
-      camera_image.topic_name: /camera/image_raw
-      camera_image.kind: data
-      camera_image.message_type: image
-      camera_image.reliability: best_effort
-      camera_image.deadline_ms: 250
-      camera_image.timeout_ms: 700
-
-      camera_heartbeat.node_name: simulated_camera_node
-      camera_heartbeat.topic_name: /camera/heartbeat
-      camera_heartbeat.kind: heartbeat
-      camera_heartbeat.message_type: string
-      camera_heartbeat.reliability: reliable
-      camera_heartbeat.deadline_ms: 700
-      camera_heartbeat.liveliness_ms: 1500
-      camera_heartbeat.timeout_ms: 2000
 
 
       management_heartbeat.node_name: management_node

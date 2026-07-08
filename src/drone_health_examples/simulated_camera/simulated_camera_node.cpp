@@ -10,7 +10,9 @@
   #include "rclcpp/rclcpp.hpp"
   #include "sensor_msgs/msg/image.hpp"
   #include "std_msgs/msg/string.hpp"
-  #include "drone_health_interfaces/srv/set_module_inactive.hpp"
+  #include "drone_health_interfaces/msg/monitor_spec.hpp"
+  #include "drone_health_interfaces/srv/deregister_module.hpp"
+  #include "drone_health_interfaces/srv/register_module.hpp"
   #include "std_srvs/srv/trigger.hpp"
 
 
@@ -33,7 +35,9 @@ public:
   }
 
 private:
-  using SetModuleInactive = drone_health_interfaces::srv::SetModuleInactive;
+  using DeregisterModule = drone_health_interfaces::srv::DeregisterModule;
+  using MonitorSpec = drone_health_interfaces::msg::MonitorSpec;
+  using RegisterModule = drone_health_interfaces::srv::RegisterModule;
   using Trigger = std_srvs::srv::Trigger;
 
 
@@ -110,8 +114,10 @@ private:
 
   void setup_management_client()
   {
-    management_client_ = create_client<SetModuleInactive>(
-        "/management/set_module_inactive");
+    register_client_ = create_client<RegisterModule>(
+        "/management/register_module");
+    deregister_client_ = create_client<DeregisterModule>(
+        "/management/deregister_module");
   }
 
 
@@ -181,27 +187,26 @@ private:
       return;
     }
 
-    if (!management_client_->service_is_ready()) {
+    if (!deregister_client_->service_is_ready()) {
       RCLCPP_WARN_THROTTLE(
           get_logger(),
           *get_clock(),
           2000,
-          "Management service not ready; camera will retry deregistration");
+          "Management deregister service not ready; camera will retry deregistration");
       return;
     }
 
-    auto request = std::make_shared<SetModuleInactive::Request>();
+    auto request = std::make_shared<DeregisterModule::Request>();
     request->module_name = "camera";
-    request->inactive = true;
     request->reason = reason;
 
     deregistration_request_pending_ = true;
     shutdown_after_deregister_ = shutdown_after_success;
 
-    management_client_->async_send_request(
+    deregister_client_->async_send_request(
         request,
       [this, reason, shutdown_after_success](
-        std::shared_future<SetModuleInactive::Response::SharedPtr> future)
+        std::shared_future<DeregisterModule::Response::SharedPtr> future)
       {
         deregistration_request_pending_ = false;
 
@@ -235,8 +240,16 @@ private:
 
   void timer_callback()
   {
+    if (!registered_ && !register_request_pending_) {
+      request_register();
+    }
+
     if (deregistration_requested_ && !self_deregistered_) {
       request_self_deregister("deregistered", shutdown_after_deregister_);
+    }
+
+    if (!registered_) {
+      return;
     }
 
     if (!publishing_enabled_) {
@@ -250,6 +263,85 @@ private:
     publish_image();
     publish_heartbeat();
     heartbeat_publisher_->assert_liveliness();
+  }
+
+  MonitorSpec make_monitor(
+    const std::string & topic_name,
+    const std::string & kind,
+    const std::string & message_type,
+    const std::string & reliability,
+    int deadline_ms,
+    int liveliness_ms) const
+  {
+    MonitorSpec monitor;
+    monitor.topic_name = topic_name;
+    monitor.kind = kind;
+    monitor.message_type = message_type;
+    monitor.reliability = reliability;
+    monitor.deadline_ms = deadline_ms;
+    monitor.liveliness_ms = liveliness_ms;
+    return monitor;
+  }
+
+  void request_register()
+  {
+    if (!register_client_->service_is_ready()) {
+      RCLCPP_WARN_THROTTLE(
+          get_logger(),
+          *get_clock(),
+          2000,
+          "Management register service not ready; camera will retry registration");
+      return;
+    }
+
+    auto request = std::make_shared<RegisterModule::Request>();
+    request->module_name = "camera";
+    request->critical = false;
+
+    request->monitors.push_back(
+      make_monitor(
+        "/camera/heartbeat",
+        "heartbeat",
+        "std_msgs/msg/String",
+        "reliable",
+        heartbeat_deadline_ms_,
+        heartbeat_liveliness_ms_));
+
+    request->monitors.push_back(
+      make_monitor(
+        "/camera/image_raw",
+        "data",
+        "sensor_msgs/msg/Image",
+        "best_effort",
+        image_deadline_ms_,
+        0));
+
+    register_request_pending_ = true;
+
+    register_client_->async_send_request(
+        request,
+      [this](std::shared_future<RegisterModule::Response::SharedPtr> future)
+      {
+        register_request_pending_ = false;
+
+        const auto response = future.get();
+        if (!response->success) {
+          RCLCPP_WARN(
+              get_logger(),
+              "Camera registration rejected: %s",
+              response->message.c_str());
+          return;
+        }
+
+        registered_ = true;
+        self_deregistered_ = false;
+        publishing_enabled_ = true;
+
+        RCLCPP_INFO(
+            get_logger(),
+            "Camera registered dynamically: %s",
+            response->message.c_str());
+      });
   }
 
 
@@ -294,6 +386,8 @@ private:
   int frame_count_{0};
 
   bool publishing_enabled_{true};
+  bool registered_{false};
+  bool register_request_pending_{false};
   bool self_deregistered_{false};
   bool deregistration_request_pending_{false};
   bool deregistration_requested_{false};
@@ -305,7 +399,8 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr heartbeat_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Client<SetModuleInactive>::SharedPtr management_client_;
+  rclcpp::Client<RegisterModule>::SharedPtr register_client_;
+  rclcpp::Client<DeregisterModule>::SharedPtr deregister_client_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_phase_subscription_;
   rclcpp::Service<Trigger>::SharedPtr request_deregister_service_;
 

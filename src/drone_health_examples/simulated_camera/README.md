@@ -21,15 +21,17 @@ graph TD
         Logic["🧠 Deregistration Logic"]
     end
 
+    CAM -->|"/management/register_module<br/>(heartbeat + image MonitorSpec)"| MN["🎛️ Management Node"]
+    MN -->|"managed_modules[].monitors"| HM["🏥 Health Monitor"]
     CAM -->|"/camera/image_raw"| Sub["👁️ Vision Pipeline"]
-    CAM -->|"/camera/heartbeat"| HM["🏥 Health Monitor"]
-    Logic -->|"set_module_inactive<br/>(reason: deregistered)"| MN["🎛️ Management Node"]
+    CAM -->|"/camera/image_raw<br/>/camera/heartbeat"| HM
+    Logic -->|"/management/deregister_module<br/>(reason: deregistered)"| MN
     
     style CAM fill:#ff9800,stroke:#ffb74d,color:#000
     style MN fill:#1e3a5f,stroke:#4fc3f7,color:#fff
 ```
 
-**Flow**: The camera publishes simulated images and a DDS heartbeat. When the mission phase reaches `INSPECTION_COMPLETE` (or an external trigger is called), the camera requests to be marked inactive via the Management Node. Once acknowledged, it stops publishing and shuts down gracefully.
+**Flow**: The camera dynamically registers its heartbeat and image topic with the Management Node, then publishes simulated images and a DDS heartbeat. When the mission phase reaches `INSPECTION_COMPLETE` (or an external trigger is called), the camera requests deregistration through Management. Once acknowledged, it stops publishing and shuts down gracefully.
 
 ---
 
@@ -66,7 +68,8 @@ stateDiagram-v2
 | Service | Type | Direction | Description |
 |---|---|---|---|
 | `/camera/request_deregister` | `std_srvs/Trigger` | Server | Allows external tools to manually trigger graceful shutdown. |
-| `/management/set_module_inactive` | `SetModuleInactive` | Client | Calls the Management Node to officially deregister. |
+| `/management/register_module` | `RegisterModule` | Client | Registers the camera as a runtime module with heartbeat and image monitor specs. |
+| `/management/deregister_module` | `DeregisterModule` | Client | Calls the Management Node to officially deregister. |
 
 ---
 
@@ -121,7 +124,7 @@ This node is specifically designed to teach the difference between a **fault** a
 | Scenario | What Happens | Health Monitor Verdict |
 |---|---|---|
 | **Node Crashes / Killed** | Heartbeat and images stop abruptly. | 🔴 **STALE / ERROR** (Triggers Supervisor HOLD/FAILSAFE if critical) |
-| **Graceful Deregistration** | Node calls `set_module_inactive` before stopping. | Management marks camera planned inactive; dashboard removes camera health tiles so no false alarm is shown. |
+| **Graceful Deregistration** | Node calls `deregister_module` before stopping. | Management marks camera planned inactive; Health Monitor removes runtime subscriptions and the dashboard removes camera health tiles. |
 
 ---
 
@@ -132,7 +135,7 @@ In a physical drone, this pattern is used for:
 * **Removable inspection cameras** that power down after a specific waypoint is reached to save battery.
 * **Secondary communication links** that are only active in certain geographic zones.
 
-By using the `set_module_inactive` service, the autonomy stack tells Management that this is expected downtime. Because the camera is statically configured in YAML, rerunning it after deregistration requires an operator restore command before Health Monitor treats it as active again.
+By using runtime `register_module` and `deregister_module` services, the autonomy stack tells Management when the camera is active and when its downtime is expected. Because the camera is dynamically registered, rerunning the node registers it again and clears the previous planned-inactive state without a manual restore command.
 
 ---
 

@@ -105,7 +105,7 @@ management_node:
       - safety
       - health
       - supervisor
-      - camera
+      - network
 
     # Critical sensor required for flight
     lidar.critical: true
@@ -114,11 +114,8 @@ management_node:
       - /lidar/heartbeat
       - /lidar/nearest_obstacle
 
-    # Non-critical payload module
-    camera.critical: false
-    camera.topics:
-      - /camera/image_raw
-      - /camera/heartbeat
+    # Optional payloads such as camera can register dynamically at runtime
+    # using /management/register_module with MonitorSpec entries.
 ```
 
 ### Parameter Definitions
