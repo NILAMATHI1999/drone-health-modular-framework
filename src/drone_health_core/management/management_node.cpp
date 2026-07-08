@@ -213,6 +213,7 @@ private:
       planned_inactive_modules_[request->module_name] = request->reason;
       response->success = true;
       response->message =
+
         "module marked planned inactive: " + request->module_name + " - " +
         request->reason;
       publish_state();

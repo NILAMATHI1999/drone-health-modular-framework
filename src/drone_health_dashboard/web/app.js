@@ -154,6 +154,13 @@ function renderRejected(management) {
   `).join("");
 }
 
+function atDisplayValue(value) {
+  if (!value) {
+    return "--";
+  }
+  return String(value).split(" from AT", 1)[0] || "--";
+}
+
 function signalBarsMarkup(value) {
   if (value === null || value === undefined || value < 0) {
     return "--";
@@ -200,6 +207,20 @@ function renderNetwork(data) {
     network.lte_rsrq || "--";
   document.getElementById("lteSinr").textContent =
     network.lte_sinr || "--";
+  document.getElementById("atModemState").textContent =
+    network.at_modem_state || "NO_DATA";
+  document.getElementById("atModemOperator").textContent =
+    atDisplayValue(network.at_modem_operator);
+  document.getElementById("atModemRat").textContent =
+    atDisplayValue(network.at_modem_rat);
+  document.getElementById("atModemRssi").textContent =
+    atDisplayValue(network.at_modem_rssi);
+  document.getElementById("atModemRsrp").textContent =
+    atDisplayValue(network.at_modem_rsrp);
+  document.getElementById("atModemRsrq").textContent =
+    atDisplayValue(network.at_modem_rsrq);
+  document.getElementById("atModemSinr").textContent =
+    atDisplayValue(network.at_modem_sinr);
   document.getElementById("atSummary").textContent =
     network.at_summary || "--";
 }

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -33,6 +34,7 @@ private:
     declare_parameter<int>("poll_period_ms", 2000);
     declare_parameter<int>("command_delay_ms", 2000);
     declare_parameter<int>("response_timeout_ms", 1000);
+    declare_parameter<std::string>("mock_response_mode", "ok");
   }
 
   void read_parameters()
@@ -43,6 +45,7 @@ private:
     poll_period_ms_ = get_parameter("poll_period_ms").as_int();
     command_delay_ms_ = get_parameter("command_delay_ms").as_int();
     response_timeout_ms_ = get_parameter("response_timeout_ms").as_int();
+    mock_response_mode_ = get_parameter("mock_response_mode").as_string();
   }
 
   void validate_parameters() const
@@ -57,6 +60,21 @@ private:
       response_timeout_ms_ <= 0)
     {
       throw std::runtime_error("AT modem timing and baud parameters must be greater than 0");
+    }
+
+    const std::unordered_set<std::string> valid_modes = {
+      "ok",
+      "error",
+      "timeout",
+      "no_sim",
+      "no_service",
+      "modem_busy",
+      "serial_disconnect",
+    };
+    if (valid_modes.find(mock_response_mode_) == valid_modes.end()) {
+      throw std::runtime_error(
+        "mock_response_mode must be one of: ok, error, timeout, no_sim, no_service, "
+        "modem_busy, serial_disconnect");
     }
   }
 
@@ -99,15 +117,45 @@ private:
 
   void publish_mock_values()
   {
-    publish_string(state_pub_, "CONNECTED_MOCK");
-    publish_string(operator_pub_, "MOCK_OPERATOR from AT+COPS?");
-    publish_string(rat_pub_, "LTE/4G from AT^SYSINFOEX");
-    publish_string(rssi_pub_, "-65 dBm from AT+CSQ");
-    publish_string(rsrp_pub_, "-96 dBm from AT^HCSQ?");
-    publish_string(rsrq_pub_, "-12 dB from AT^HCSQ?");
-    publish_string(sinr_pub_, "2 dB from AT^HCSQ?");
-    publish_string(plmn_pub_, "26202 from AT+COPS?");
+    if (mock_response_mode_ == "ok") {
+      publish_string(state_pub_, "CONNECTED_MOCK");
+      publish_string(operator_pub_, "MOCK_OPERATOR from AT+COPS?");
+      publish_string(rat_pub_, "LTE/4G from AT^SYSINFOEX");
+      publish_string(rssi_pub_, "-65 dBm from AT+CSQ");
+      publish_string(rsrp_pub_, "-96 dBm from AT^HCSQ?");
+      publish_string(rsrq_pub_, "-12 dB from AT^HCSQ?");
+      publish_string(sinr_pub_, "2 dB from AT^HCSQ?");
+      publish_string(plmn_pub_, "26202 from AT+COPS?");
+      publish_heartbeat();
+      return;
+    }
+
+    if (mock_response_mode_ == "error") {
+      publish_mock_failure("ERROR_MOCK", "ERROR");
+    } else if (mock_response_mode_ == "timeout") {
+      publish_mock_failure("TIMEOUT_MOCK", "TIMEOUT");
+    } else if (mock_response_mode_ == "no_sim") {
+      publish_mock_failure("NO_SIM_MOCK", "NO SIM");
+    } else if (mock_response_mode_ == "no_service") {
+      publish_mock_failure("NO_SERVICE_MOCK", "NO SERVICE");
+    } else if (mock_response_mode_ == "modem_busy") {
+      publish_mock_failure("MODEM_BUSY_MOCK", "MODEM BUSY");
+    } else if (mock_response_mode_ == "serial_disconnect") {
+      publish_mock_failure("SERIAL_DISCONNECTED_MOCK", "SERIAL DISCONNECTED");
+    }
     publish_heartbeat();
+  }
+
+  void publish_mock_failure(const std::string & state, const std::string & response)
+  {
+    publish_string(state_pub_, state);
+    publish_string(operator_pub_, response + " from AT+COPS?");
+    publish_string(rat_pub_, response + " from AT^SYSINFOEX");
+    publish_string(rssi_pub_, response + " from AT+CSQ");
+    publish_string(rsrp_pub_, response + " from AT^HCSQ?");
+    publish_string(rsrq_pub_, response + " from AT^HCSQ?");
+    publish_string(sinr_pub_, response + " from AT^HCSQ?");
+    publish_string(plmn_pub_, response + " from AT+COPS?");
   }
 
   void publish_serial_template_unavailable()
@@ -137,12 +185,12 @@ private:
   {
     (void)command;
 
-    // Template extension point for future students with serial AT hardware:
-    // 1. Open serial_port_ using baud_rate_ and raw terminal settings.
-    // 2. Write command + "\r".
-    // 3. Wait command_delay_ms_ between modem requests.
-    // 4. Read until OK, ERROR, or response_timeout_ms_ expires.
-    // 5. Return the raw response for parser functions.
+    // TODO(real serial backend): this is the only hardware-dependent part left.
+    // Future students should open serial_port_ such as /dev/ttyUSB0 using
+    // baud_rate_ and raw terminal settings, write command + "\r", wait
+    // command_delay_ms_ between AT requests, then read until OK, ERROR, or
+    // response_timeout_ms_ expires. Return the raw modem response so the parser
+    // and retry/error-handling logic can be reused with real LTE/5G hardware.
     return "";
   }
 
@@ -182,6 +230,7 @@ private:
   int poll_period_ms_{2000};
   int command_delay_ms_{2000};
   int response_timeout_ms_{1000};
+  std::string mock_response_mode_{"ok"};
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_, operator_pub_, rat_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr rssi_pub_, rsrp_pub_, rsrq_pub_, sinr_pub_, plmn_pub_;

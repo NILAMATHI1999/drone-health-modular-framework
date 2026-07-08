@@ -86,8 +86,8 @@
       <div class="network-tabs" role="tablist" aria-label="Network details">
         <button class="network-tab active" type="button" data-network-tab="overall">Overall</button>
         <button class="network-tab" type="button" data-network-tab="wifi">Wi-Fi</button>
-        <button class="network-tab" type="button" data-network-tab="lte">LTE</button>
-        <button class="network-tab" type="button" data-network-tab="at">AT Summary</button>
+        <button class="network-tab" type="button" data-network-tab="lte">LTE / Huawei</button>
+        <button class="network-tab" type="button" data-network-tab="at">Serial AT</button>
       </div>
 
       <div class="network-tab-panels">
@@ -127,37 +127,76 @@
 
         <section class="network-tab-panel" data-network-panel="lte">
           <div class="status-row">
+            <span>Source</span>
+            <strong>Huawei HTTP</strong>
+          </div>
+          <div class="status-row">
             <span>State</span>
             <strong id="lteState">NO_DATA</strong>
           </div>
           <div class="status-row">
-            <span>Operator</span>
+            <span>AT+COPS?</span>
             <strong id="lteOperator">--</strong>
           </div>
           <div class="status-row">
-            <span>RAT</span>
+            <span>AT^SYSINFOEX</span>
             <strong id="lteRat">--</strong>
           </div>
           <div class="status-row">
-            <span>RSSI</span>
+            <span>AT+CSQ</span>
             <strong id="lteRssi">--</strong>
           </div>
           <div class="status-row">
-            <span>RSRP</span>
+            <span>AT^HCSQ? RSRP</span>
             <strong id="lteRsrp">--</strong>
           </div>
           <div class="status-row">
-            <span>RSRQ</span>
+            <span>AT^HCSQ? RSRQ</span>
             <strong id="lteRsrq">--</strong>
           </div>
           <div class="status-row">
-            <span>SINR</span>
+            <span>AT^HCSQ? SINR</span>
             <strong id="lteSinr">--</strong>
           </div>
         </section>
 
         <section class="network-tab-panel" data-network-panel="at">
-          <p id="atSummary">--</p>
+          <div class="status-row">
+            <span>AT</span>
+            <strong id="atSummary">--</strong>
+          </div>
+          <div class="status-row">
+            <span>Source</span>
+            <strong>Mock Serial AT</strong>
+          </div>
+          <div class="status-row">
+            <span>State</span>
+            <strong id="atModemState">NO_DATA</strong>
+          </div>
+          <div class="status-row">
+            <span>AT+COPS?</span>
+            <strong id="atModemOperator">--</strong>
+          </div>
+          <div class="status-row">
+            <span>AT^SYSINFOEX</span>
+            <strong id="atModemRat">--</strong>
+          </div>
+          <div class="status-row">
+            <span>AT+CSQ</span>
+            <strong id="atModemRssi">--</strong>
+          </div>
+          <div class="status-row">
+            <span>AT^HCSQ? RSRP</span>
+            <strong id="atModemRsrp">--</strong>
+          </div>
+          <div class="status-row">
+            <span>AT^HCSQ? RSRQ</span>
+            <strong id="atModemRsrq">--</strong>
+          </div>
+          <div class="status-row">
+            <span>AT^HCSQ? SINR</span>
+            <strong id="atModemSinr">--</strong>
+          </div>
         </section>
       </div>
     </section>
