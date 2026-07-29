@@ -1,0 +1,19 @@
+cpu_temperature_publisher:
+  ros__parameters:
+    module_name: "cpu_temperature_publisher"
+    critical: false
+
+    thermal_file: "/sys/class/thermal/thermal_zone0/temp"
+
+    heartbeat_topic: "/system/cpu_temperature/heartbeat"
+    temperature_topic: "/system/cpu_temperature"
+
+    publish_period_ms: 1000
+
+    heartbeat_deadline_ms: 1500
+    heartbeat_liveliness_ms: 0
+    temperature_deadline_ms: 2000
+
+    auto_deregister_after_cycles: 0
+
+    request_deregister_service: "/cpu_temperature_publisher/request_deregister"

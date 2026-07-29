@@ -1,0 +1,10 @@
+registrable_service_template_node:
+  ros__parameters:
+    module_name: "service_template_node"
+    critical: false
+    heartbeat_topic: "/template_service/heartbeat"
+    heartbeat_period_ms: 200
+    heartbeat_deadline_ms: 500
+    heartbeat_liveliness_ms: 0
+    auto_deregister_after_cycles: 0
+    request_deregister_service: "/template_service/request_deregister"

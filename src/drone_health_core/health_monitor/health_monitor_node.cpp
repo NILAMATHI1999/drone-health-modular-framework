@@ -5,7 +5,10 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include "rmw/rmw.h"
+
 #include <unordered_set>
+
 #include "drone_health_interfaces/msg/monitor_spec.hpp"
 #include "rclcpp/generic_subscription.hpp"
 #include "rclcpp/serialized_message.hpp"
@@ -140,7 +143,6 @@ private:
     if (config.reliability != "reliable" && config.reliability != "best_effort") {
       throw std::runtime_error("monitor " + config.id + " has invalid reliability");
     }
-
     if (config.deadline_ms < 0 ||
       config.liveliness_ms < 0 ||
       config.timeout_ms <= 0)
@@ -185,11 +187,30 @@ private:
     return qos;
   }
 
+  // Zenoh does not support the DDS event callbacks used below. Other RMWs retain
+  // native deadline, liveliness, and incompatible-QoS event handling.
+  bool qos_event_callbacks_supported() const
+  {
+    const char * rmw = rmw_get_implementation_identifier();
+
+    return rmw == nullptr ||
+           std::string(rmw).find("rmw_zenoh_cpp") == std::string::npos;
+  }
+
   rclcpp::SubscriptionOptions make_subscription_options(const std::string & id)
   {
     rclcpp::SubscriptionOptions options;
 
     const auto & config = monitors_.at(id);
+
+    // HealthMonitor periodic timeout checks provide the Zenoh fallback.
+    if (!qos_event_callbacks_supported()) {
+      RCLCPP_WARN_ONCE(
+        get_logger(),
+        "QoS event callbacks are disabled for this RMW; using fallback timeout monitoring");
+      return options;
+    }
+
 
     if (config.deadline_ms > 0) {
       options.event_callbacks.deadline_callback =
@@ -239,6 +260,7 @@ private:
         std::placeholders::_1));
   }
 
+  // Refresh planned-inactive topic reasons from /management/state, then sync runtime monitor subscriptions.
   void handle_management_state(const ManagementState::SharedPtr msg)
   {
     planned_inactive_reasons_.clear();
@@ -255,6 +277,8 @@ private:
     reconcile_runtime_monitors(msg);
   }
 
+  // Reconcile active runtime modules without touching static YAML monitors or
+  // planned-inactive modules.
   void reconcile_runtime_monitors(const ManagementState::SharedPtr msg)
   {
     std::unordered_set<std::string> expected_runtime_modules;
@@ -297,6 +321,7 @@ private:
     }
   }
 
+  // Avoid rebuilding subscriptions when a module MonitorSpec is unchanged.
   bool monitor_specs_equal(
     const std::vector<MonitorSpec> & left,
     const std::vector<MonitorSpec> & right) const
@@ -320,6 +345,7 @@ private:
     return true;
   }
 
+  // Convert ROS runtime type names to the short names used by static monitors.
   std::string runtime_message_type_to_health_type(
     const std::string & message_type) const
   {
@@ -448,8 +474,8 @@ private:
             monitor.topic_name,
             monitor.message_type,
             qos,
-            [this, id](std::shared_ptr<rclcpp::SerializedMessage>) {
-              handle_message(id);
+          [this, id](std::shared_ptr<rclcpp::SerializedMessage>) {
+            handle_message(id);
             },
             options);
 
@@ -577,8 +603,8 @@ private:
       string_subscriptions_.push_back(create_subscription<std_msgs::msg::String>(
         config.topic_name,
         qos,
-        [this, id](const std_msgs::msg::String::SharedPtr) {
-          handle_message(id);
+          [this, id](const std_msgs::msg::String::SharedPtr) {
+            handle_message(id);
         },
         options));
       return;
@@ -588,8 +614,8 @@ private:
       float_subscriptions_.push_back(create_subscription<std_msgs::msg::Float32>(
         config.topic_name,
         qos,
-        [this, id](const std_msgs::msg::Float32::SharedPtr) {
-          handle_message(id);
+          [this, id](const std_msgs::msg::Float32::SharedPtr) {
+            handle_message(id);
         },
         options));
       return;
@@ -611,8 +637,8 @@ private:
       scan_subscriptions_.push_back(create_subscription<sensor_msgs::msg::LaserScan>(
         config.topic_name,
         qos,
-        [this, id](const sensor_msgs::msg::LaserScan::SharedPtr) {
-          handle_message(id);
+          [this, id](const sensor_msgs::msg::LaserScan::SharedPtr) {
+            handle_message(id);
         },
         options));
       return;
@@ -622,8 +648,8 @@ private:
       image_subscriptions_.push_back(create_subscription<sensor_msgs::msg::Image>(
         config.topic_name,
         qos,
-        [this, id](const sensor_msgs::msg::Image::SharedPtr) {
-          handle_message(id);
+          [this, id](const sensor_msgs::msg::Image::SharedPtr) {
+            handle_message(id);
         },
         options));
       return;
@@ -639,6 +665,7 @@ private:
       std::bind(&HealthMonitorNode::check_fallback_timeouts, this));
   }
 
+  // Called when a monitored topic receives a message; updates freshness and publishes OK/INACTIVE periodically.
   void handle_message(const std::string & id)
   {
     auto & config = monitors_.at(id);

@@ -1,0 +1,13 @@
+registrable_template_node:
+  ros__parameters:
+    module_name: "publisher_template_node"
+    critical: false
+    heartbeat_topic: "/template_publisher/heartbeat"
+    publish_period_ms: 200
+    heartbeat_deadline_ms: 500
+    heartbeat_liveliness_ms: 0
+    publish_data_topic: true
+    data_topic: "/template_publisher/value"
+    data_deadline_ms: 500
+    auto_deregister_after_cycles: 0
+    request_deregister_service: "/template_publisher/request_deregister"

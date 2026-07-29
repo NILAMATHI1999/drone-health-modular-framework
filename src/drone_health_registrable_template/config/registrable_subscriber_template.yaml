@@ -1,0 +1,13 @@
+registrable_subscriber_template_node:
+  ros__parameters:
+    module_name: "subscriber_template_node"
+    critical: false
+    input_topic: "/template/input"
+    output_topic: "/template_subscriber/output"
+    output_deadline_ms: 500
+    heartbeat_topic: "/template_subscriber/heartbeat"
+    heartbeat_period_ms: 200
+    heartbeat_deadline_ms: 500
+    heartbeat_liveliness_ms: 0
+    auto_deregister_after_cycles: 0
+    request_deregister_service: "/template_subscriber/request_deregister"

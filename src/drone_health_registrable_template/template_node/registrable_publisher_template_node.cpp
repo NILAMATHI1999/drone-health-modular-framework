@@ -16,6 +16,17 @@
 
 using namespace std::chrono_literals;
 
+// Reusable publisher template.
+// Future user should replace:
+// - Float32 data message with the real output message type.
+// - publish_data() with real sensor/perception publishing logic.
+// - default topic names in declare_parameters() or YAML config.
+// Keep:
+// - register_module request with MonitorSpec[]
+// - heartbeat publisher
+// - request_deregister flow
+
+
 class RegistrableTemplateNode : public rclcpp::Node
 {
 public:
@@ -50,6 +61,12 @@ private:
     declare_parameter<bool>("publish_data_topic", true);
     declare_parameter<std::string>("data_topic", "/template/value");
     declare_parameter<int>("data_deadline_ms", 500);
+    declare_parameter<int>("auto_deregister_after_cycles", 0);
+    declare_parameter<std::string>(
+      "request_deregister_service",
+      "/template_publisher/request_deregister");
+
+
   }
 
   void read_parameters()
@@ -63,6 +80,16 @@ private:
     publish_data_topic_ = get_parameter("publish_data_topic").as_bool();
     data_topic_ = get_parameter("data_topic").as_string();
     data_deadline_ms_ = get_parameter("data_deadline_ms").as_int();
+    auto_deregister_after_cycles_ = get_parameter("auto_deregister_after_cycles").as_int();
+    request_deregister_service_name_ =
+      get_parameter("request_deregister_service").as_string();
+
+    if (request_deregister_service_name_.empty() ||
+      request_deregister_service_name_.front() != '/')
+    {
+      throw std::runtime_error("request_deregister_service must start with /");
+    }
+
 
     if (publish_data_topic_ && data_topic_.empty()) {
       throw std::runtime_error("data_topic must not be empty when publish_data_topic is true");
@@ -93,8 +120,8 @@ private:
     }
 
     if (heartbeat_deadline_ms_ > 0 &&
-        heartbeat_liveliness_ms_ > 0 &&
-        heartbeat_liveliness_ms_ <= heartbeat_deadline_ms_)
+      heartbeat_liveliness_ms_ > 0 &&
+      heartbeat_liveliness_ms_ <= heartbeat_deadline_ms_)
     {
       throw std::runtime_error(
         "heartbeat_liveliness_ms must be greater than heartbeat_deadline_ms");
@@ -103,6 +130,12 @@ private:
     if (heartbeat_deadline_ms_ > 0 && publish_period_ms_ >= heartbeat_deadline_ms_) {
       throw std::runtime_error("publish_period_ms must be less than heartbeat_deadline_ms");
     }
+
+    if (auto_deregister_after_cycles_ < 0) {
+      throw std::runtime_error("auto_deregister_after_cycles must not be negative");
+    }
+
+
   }
 
   void setup_qos()
@@ -120,11 +153,42 @@ private:
 
     if (heartbeat_liveliness_ms_ > 0) {
       heartbeat_qos_
-        .liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC)
-        .liveliness_lease_duration(std::chrono::milliseconds(heartbeat_liveliness_ms_)
-        );
+      .liveliness(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC)
+      .liveliness_lease_duration(std::chrono::milliseconds(heartbeat_liveliness_ms_)
+      );
     }
   }
+
+    // Optional internal self-deregistration example.
+    // Default 0 disables it.
+    // Future users can replace this cycle-count condition with real task logic:
+    // task complete, calibration complete, mission phase finished, or payload no longer required.
+
+  void maybe_request_auto_deregister()
+  {
+    if (auto_deregister_after_cycles_ == 0) {
+      return;
+    }
+
+    if (deregister_requested_ || deregister_request_pending_ || deregistered_) {
+      return;
+    }
+
+    ++active_cycle_count_;
+
+    if (active_cycle_count_ < auto_deregister_after_cycles_) {
+      return;
+    }
+
+    RCLCPP_INFO(
+      get_logger(),
+      "Auto deregistration condition reached after %d cycles",
+      active_cycle_count_);
+
+    deregister_requested_ = true;
+    shutdown_after_deregister_ = true;
+  }
+
 
   void setup_publishers()
   {
@@ -148,7 +212,7 @@ private:
   void setup_services()
   {
     request_deregister_service_ = create_service<Trigger>(
-      "/template/request_deregister",
+      request_deregister_service_name_,
       std::bind(
         &RegistrableTemplateNode::handle_request_deregister,
         this,
@@ -180,11 +244,23 @@ private:
       return;
     }
 
+    if (!registered_) {
+      return;
+    }
+
+    maybe_request_auto_deregister();
+
+    if (deregister_requested_) {
+      return;
+    }
+
     publish_heartbeat();
+
     if (publish_data_topic_) {
       publish_data();
     }
   }
+
 
   void request_register()
   {
@@ -324,6 +400,11 @@ private:
     }
   }
 
+
+// Replace this function with real publisher logic.
+// Example: publish GPS fix, camera frame, battery status, or detection output.
+
+
   void publish_data()
   {
     if (!data_publisher_) {
@@ -338,6 +419,7 @@ private:
   std::string module_name_;
   bool critical_{false};
   std::string heartbeat_topic_;
+  std::string request_deregister_service_name_;
   int publish_period_ms_;
   int heartbeat_deadline_ms_;
   int heartbeat_liveliness_ms_;
@@ -346,6 +428,9 @@ private:
   std::string data_topic_;
   int data_deadline_ms_{500};
   int data_counter_{0};
+  int auto_deregister_after_cycles_{0};
+  int active_cycle_count_{0};
+
 
   bool registered_{false};
   bool register_request_pending_{false};
@@ -372,4 +457,3 @@ int main(int argc, char ** argv)
   rclcpp::shutdown();
   return 0;
 }
-

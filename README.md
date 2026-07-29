@@ -54,7 +54,7 @@ graph TD
     end
 
     subgraph PKG_TEMPLATE ["📦 drone_health_registrable_template"]
-        TEMPLATE["registrable_template_node<br/>Runtime Registration Demo"]
+        TEMPLATE["publisher / subscriber / service templates<br/>Runtime Registration Demos"]
     end
 
     subgraph PKG_DASHBOARD ["📦 drone_health_dashboard"]
@@ -210,8 +210,9 @@ ros2 run drone_health_network_example at_modem_monitor_node \
 ### 5. Optional Demo Modules
 
 ```bash
-# Terminal 13: Registrable Template Node
-ros2 run drone_health_registrable_template registrable_template_node
+# Terminal 13: Registrable Publisher Template
+ros2 run drone_health_registrable_template registrable_publisher_template_node --ros-args --params-file \
+  src/drone_health_registrable_template/config/registrable_publisher_template.yaml
 
 # Terminal 14: Simulated Camera
 ros2 run drone_health_examples simulated_camera_node
@@ -252,11 +253,11 @@ ros2 service call /management/set_maintenance_mode std_srvs/srv/SetBool "{data: 
 
 ```bash
 # Self-deregister via template's own service
-ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
+ros2 service call /template_publisher/request_deregister std_srvs/srv/Trigger "{}"
 
 # Operator-triggered deregistration (for deadline/stale testing)
 ros2 service call /management/deregister_module drone_health_interfaces/srv/DeregisterModule \
-  "{module_name: template_node, reason: deregistered}"
+  "{module_name: publisher_template_node, reason: deregistered}"
 ```
 
 ### Camera Node — Self-Deregistration & Restore

@@ -1,167 +1,320 @@
 # drone_health_registrable_template
 
-[![ROS 2](https://img.shields.io/badge/ROS_2-Humble%20%7C%20Iron%20%7C%20Jazzy-blue)](https://docs.ros.org/)
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-purple.svg)](https://en.cppreference.com/w/cpp/17)
+Reusable ROS 2 template package for future nodes that need to join the Drone Health Monitoring Framework dynamically.
 
-A reusable boilerplate node demonstrating the **correct lifecycle pattern** for any module that needs to dynamically join and leave the Drone Health Monitoring Framework at runtime. Use this as a starting point when building new sensors, payloads, or removable components that must self-register their heartbeat and QoS requirements without editing core YAML files.
+This package provides three template patterns:
 
----
+- publisher-style node
+- subscriber + publisher-style processing node
+- service-style node
 
-## 🏗️ Lifecycle Architecture
+Each template shows how a future ROS node can:
 
-```mermaid
-graph TD
-    subgraph Node [Registrable Template Node]
-        Start["🚀 Startup"]
-        Reg["📝 Register Request<br/>RegisterModule.srv"]
-        Active["💓 Active Publishing<br/>Heartbeat + Data"]
-        DeregSrv["/template/request_deregister<br/>Trigger.srv"]
-        Dereg["📤 Deregister Request<br/>DeregisterModule.srv"]
-        Shutdown["🛑 Clean Shutdown"]
-    end
+- register with Management at startup
+- describe monitored topics using `MonitorSpec[]`
+- publish a heartbeat
+- publish owned data/output topics when needed
+- request planned deregistration before shutdown
+- optionally self-deregister from internal task logic
+- avoid manual edits in HealthMonitor or Management YAML for runtime modules
 
-    subgraph Core [drone_health_core]
-        MN["🎛️ Management Node"]
-        HM["🏥 Health Monitor"]
-    end
+## Templates
 
-    Start --> Reg
-    Reg -->|"/management/register_module"| MN
-    MN -->|"success"| Active
-    MN -->|"/management/state<br/>new monitor spec"| HM
-    HM -->|"GenericSubscription spawned"| Active
+| Template | Executable | Purpose |
+|---|---|---|
+| Publisher template | `registrable_publisher_template_node` | For nodes that publish data, such as camera, GPS, LiDAR, battery, or network nodes. |
+| Subscriber template | `registrable_subscriber_template_node` | For processing nodes that subscribe to input data and publish processed output. |
+| Service template | `registrable_service_template_node` | For nodes that provide a ROS service and still need health monitoring through heartbeat. |
 
-    DeregSrv --> Dereg
-    Active -.->|"mission complete trigger"| Dereg
-    Dereg -->|"/management/deregister_module"| MN
-    MN -->|"planned_inactive added"| HM
-    HM -->|"runtime monitors removed"| Shutdown
-    Dereg --> Shutdown
-```
+## Package Structure
 
-**Flow**: On startup, the node calls `register_module` with its heartbeat and (optional) data topic specs. Once approved, it publishes continuously. When `request_deregister` is called — or a custom trigger condition is met — it calls `deregister_module` first, and only shuts down **after** the Management Node confirms the request, ensuring the Health Monitor never sees a false failure.
-
----
-
-## 🎯 Purpose
-
-This package teaches the correct pattern for:
-
-- ✅ Heartbeat publishing with proper DDS QoS (deadline + liveliness)
-- ✅ Runtime registration via `RegisterModule.srv`
-- ✅ Planned deregistration via `DeregisterModule.srv`
-- ✅ Graceful, approved shutdown (not just `Ctrl+C`)
-- ✅ Demonstrating the difference between a **crash** (STALE/ERROR) and a **planned exit** (planned inactive, no false failure)
-
----
-
-## 📦 Package Structure
-
-```
+```text
 drone_health_registrable_template/
+├── config/
+│   ├── registrable_publisher_template.yaml
+│   ├── registrable_subscriber_template.yaml
+│   ├── registrable_service_template.yaml
+│   └── cpu_temperature_publisher.yaml
 └── template_node/
-    ├── registrable_template_node.cpp
+    ├── registrable_publisher_template_node.cpp
+    ├── registrable_subscriber_template_node.cpp
+    ├── registrable_service_template_node.cpp
+    ├── cpu_temperature_publisher.cpp
     └── README.md
 ```
 
----
-
-## 🔄 Responsibility Split
-
-This is an **example/template only** — it contains no core monitoring logic.
+## Responsibility Split
 
 | Component | Responsibility |
 |---|---|
-| **Registrable Node** *(this package)* | Calls register/deregister services; publishes its own heartbeat/data. |
-| **Management Node** | Approves/rejects registration; tracks runtime registry & planned inactive state. |
-| **Health Monitor** | Subscribes dynamically to registered heartbeat/data topics; reports `OK` / `STALE` / `ERROR` while active and removes runtime monitors when planned inactive. |
-| **Dashboard** | Visualizes the resulting module status. |
+| Template node | Publishes heartbeat/data, registers MonitorSpecs, and requests deregistration. |
+| ManagementNode | Validates registration and publishes runtime module metadata in `/management/state`. |
+| HealthMonitor | Reads `/management/state` and creates runtime subscriptions for registered topics. |
+| Dashboard | Displays module, health, planned inactive, and rejected registration states. |
 
----
+## Runtime Registration Flow
 
-## 🚀 Quick Start
+```text
+template node starts
+-> calls /management/register_module
+-> sends module_name, critical flag, and MonitorSpec[]
+-> ManagementNode validates and stores module
+-> ManagementNode publishes /management/state
+-> HealthMonitor creates runtime subscriptions
+-> Dashboard shows module status
+```
 
-### 1. Build
+## Runtime Deregistration Flow
+
+```text
+planned stop requested
+-> template node calls /management/deregister_module
+-> ManagementNode marks module PLANNED_INACTIVE
+-> HealthMonitor removes/silences runtime monitors
+-> Dashboard removes active health tiles and shows planned inactive reason
+```
+
+## Build
+
 ```bash
+cd /home/nila/Desktop/drone_health_modular_ws
+source /opt/ros/jazzy/setup.bash
 colcon build --packages-select drone_health_registrable_template
 source install/setup.bash
 ```
 
-### 2. Start Core Nodes First
+## Run Publisher Template
+
 ```bash
-ros2 run drone_health_core management_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/management/management.yaml
-ros2 run drone_health_core health_monitor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/health_monitor/health_monitor.yaml
+ros2 run drone_health_registrable_template registrable_publisher_template_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_registrable_template/config/registrable_publisher_template.yaml
 ```
 
-### 3. Run the Template Node
-```bash
-ros2 run drone_health_registrable_template registrable_template_node
+Publishes and registers:
+
+```text
+/template_publisher/heartbeat
+/template_publisher/value
 ```
 
-### 4. Trigger Planned Deregistration
+Request planned deregistration:
+
 ```bash
-ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
+ros2 service call /template_publisher/request_deregister std_srvs/srv/Trigger "{}"
 ```
 
----
+## Run Subscriber Template
 
-## ⚙️ Parameters
+```bash
+ros2 run drone_health_registrable_template registrable_subscriber_template_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_registrable_template/config/registrable_subscriber_template.yaml
+```
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `module_name` | `string` | `"template_node"` | Unique identifier registered with the Management Node. |
-| `critical` | `bool` | `false` | Whether mission start/maintenance should be blocked if this module fails. |
-| `heartbeat_topic` | `string` | `/template/heartbeat` | Topic used to prove liveness. |
-| `publish_period_ms` | `int` | `200` | Heartbeat/data publish interval. Must be `<` `heartbeat_deadline_ms`. |
-| `heartbeat_deadline_ms` | `int` | `500` | DDS deadline QoS for the heartbeat (0 disables, but liveliness must then be set). |
-| `heartbeat_liveliness_ms` | `int` | `0` | DDS manual liveliness lease (must be `>` deadline if both set). |
-| `publish_data_topic` | `bool` | `true` | Whether to also register and publish an example data topic. |
-| `data_topic` | `string` | `/template/value` | Example `Float32` data topic, must start with `/`. |
-| `data_deadline_ms` | `int` | `500` | DDS deadline QoS for the data topic. |
+The subscriber template expects an input topic. For a quick test:
 
-> ⚠️ At least one of `heartbeat_deadline_ms` or `heartbeat_liveliness_ms` must be non-zero — the node throws a startup error otherwise.
+```bash
+ros2 topic pub /template/input std_msgs/msg/Float32 "{data: 2.5}" -r 5
+```
 
----
+Publishes and registers:
 
-## 📡 Interfaces
+```text
+/template_subscriber/heartbeat
+/template_subscriber/output
+```
 
-| | Name | Type | Role |
-|---|---|---|---|
-| **Pub** | `<heartbeat_topic>` | `std_msgs/String` | Heartbeat with deadline/liveliness QoS. |
-| **Pub** | `<data_topic>` | `std_msgs/Float32` | Optional example data stream (incrementing counter). |
-| **Client** | `/management/register_module` | `RegisterModule` | Sends `MonitorSpec` for heartbeat (+data) on startup. |
-| **Client** | `/management/deregister_module` | `DeregisterModule` | Requests planned inactive status before shutdown. |
-| **Srv** | `/template/request_deregister` | `std_srvs/Trigger` | External trigger to start the deregistration sequence. |
+The input topic `/template/input` is not registered by this node because it belongs to the node that publishes it.
 
----
+Request planned deregistration:
 
-## 📊 Expected vs Failure Behavior
+```bash
+ros2 service call /template_subscriber/request_deregister std_srvs/srv/Trigger "{}"
+```
 
-| Scenario | Management Node State | Health Monitor Verdict |
-|---|---|---|
-| **Normal startup** | Module appears in `managed_modules` | `OK` once first heartbeat/data messages arrive |
-| **`request_deregister` called** | Module appears in `planned_inactive_modules` (`reason: deregistered`) | Runtime health tiles are removed; no false failure is shown |
-| **Node killed (`Ctrl+C`/crash)** *without deregistering* | No state change — module still "active" | `STALE` (timeout) or `ERROR` (deadline/liveliness lost) |
+## Run Service Template
 
----
+```bash
+ros2 run drone_health_registrable_template registrable_service_template_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_registrable_template/config/registrable_service_template.yaml
+```
 
-## 🧩 Current Scope & Future Extension
+Test the example service:
 
-**Currently Supported:**
-- ✅ Runtime heartbeat monitoring (auto-spawned `GenericSubscription`)
-- ✅ Runtime data-topic monitoring with generic subscriptions
+```bash
+ros2 service call /template_service/run_action std_srvs/srv/Trigger "{}"
+```
 
-**Future Work:**
-- 🔲 Multi-topic deregistration granularity (per-topic vs per-module)
+Publishes and registers:
 
-Use this template as a starting point for:
-- 📷 Camera / vision modules
-- 🛰️ GPS / positioning modules
-- 📶 Network adapters
-- 🔍 Inspection payloads
-- 🔧 Any removable robot component
+```text
+/template_service/heartbeat
+```
 
----
+The service itself is not registered as a `MonitorSpec` because HealthMonitor monitors topic freshness, not service availability.
 
-## 📄 License
-MIT License. Free to use for academic and commercial robotics projects.
+Request planned deregistration:
+
+```bash
+ros2 service call /template_service/request_deregister std_srvs/srv/Trigger "{}"
+```
+
+## Optional Auto Self-Deregistration
+
+Each template includes:
+
+```text
+auto_deregister_after_cycles
+```
+
+Default:
+
+```text
+0
+```
+
+Meaning:
+
+```text
+disabled
+```
+
+Example:
+
+```bash
+ros2 run drone_health_registrable_template registrable_publisher_template_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_registrable_template/config/registrable_publisher_template.yaml -p auto_deregister_after_cycles:=10
+```
+
+This lets the node trigger deregistration internally after 10 active timer cycles.
+
+Future users should replace this cycle-count condition with real task logic, such as:
+
+- task complete
+- calibration complete
+- mission phase finished
+- payload no longer required
+- optional sensor disabled
+- diagnostic task finished
+
+## What Future Students Replace
+
+| Template | Replace |
+|---|---|
+| Publisher | Data message type, data topic name, and `publish_data()` logic. |
+| Subscriber | Input/output message types, `handle_input()` logic, and `publish_output()` logic. |
+| Service | Service type, service name, and service callback logic. |
+
+Keep the common integration pattern:
+
+```text
+RegisterModule client
+MonitorSpec[] creation
+heartbeat publisher
+DeregisterModule client
+planned deregistration flow
+```
+
+## AI-Assisted Integration
+
+These templates are designed so a future student or AI tool can adapt an existing ROS package by copying the relevant pattern:
+
+```text
+publisher node -> use publisher template pattern
+processing node -> use subscriber template pattern
+service node -> use service template pattern
+mixed node -> combine the relevant patterns
+```
+
+Dynamic nodes do not need to be added manually to HealthMonitor YAML or Management YAML. They are discovered from `/management/state` after registration.
+
+The YAML files in `config/` are only parameter examples for these template nodes. They are not core HealthMonitor or Management configuration files.
+
+
+## YAML Configuration Pattern
+
+Each generated or adapted node should include a matching YAML file.
+
+The top-level YAML key must match the exact ROS node name in the C++ constructor:
+
+```cpp
+: Node("registrable_template_node")
+```
+
+Example:
+
+```yaml
+registrable_template_node:
+  ros__parameters:
+    module_name: "publisher_template_node"
+    critical: false
+    heartbeat_topic: "/template_publisher/heartbeat"
+    publish_period_ms: 200
+    heartbeat_deadline_ms: 500
+    heartbeat_liveliness_ms: 0
+    publish_data_topic: true
+    data_topic: "/template_publisher/value"
+    data_deadline_ms: 500
+    auto_deregister_after_cycles: 0
+    request_deregister_service: "/template_publisher/request_deregister"
+```
+
+When adapting this template to a new node, update:
+
+- the top-level key to match `Node("...")`
+- `module_name`
+- heartbeat topic
+- owned data/output topics
+- deadline values
+- `request_deregister_service`
+
+## AI-Assisted Integration Guidance
+
+When using this template with an AI assistant, keep the prompt strict.
+
+Ask the AI to:
+
+- keep the original ROS node logic compact
+- preserve the existing code structure where possible
+- only add the drone-health integration blocks
+- follow the formatting style of these templates
+- avoid unnecessary try/catch blocks, helper classes, or large rewrites
+
+The AI output must include:
+
+- the adapted C++ node
+- the matching YAML configuration file
+- the required `CMakeLists.txt` additions
+- run and verification commands
+
+A response is incomplete if it does not include the matching YAML file, required build changes, and run/test commands
+
+The YAML file must:
+
+- use the exact ROS node name from the C++ constructor as the top-level key
+- include every declared ROS parameter
+- use topic names that match the registered `MonitorSpec` entries
+- keep deadlines greater than the publish period
+- include `request_deregister_service`
+
+Recommended prompt:
+
+```text
+Use this template as the style reference.
+Keep the original node code structure as much as possible.
+Only add the required drone-health integration:
+- registration with MonitorSpec[]
+- heartbeat publisher
+- request_deregister service
+- deregistration client
+- YAML parameters
+
+You must generate all required outputs:
+1. the adapted C++ node
+2. the matching YAML configuration file
+3. the required CMakeLists.txt additions
+4. run and verification commands
+
+Do not stop after only generating C++.
+The response is incomplete without YAML, CMake additions, and run/test commands
+
+The YAML must use the exact ROS node name from the C++ constructor as the top-level key.
+
+Do not over-format or split simple statements across many lines.
+Do not add unrelated try/catch blocks or extra abstractions unless required.
+```
