@@ -263,6 +263,65 @@ When adapting this template to a new node, update:
 - deadline values
 - `request_deregister_service`
 
+## Required Adaptation Manifest Format
+
+Every generated or adapted node must include `adaptation_manifest.yaml`.
+
+The manifest must follow this exact schema. Do not use any other layout.
+
+```yaml
+profile: "publisher"
+ros_distribution: "jazzy"
+
+node:
+  name: "<node_name>"
+  namespace: "/"
+  module_name: "<module_name>"
+  language: "<cpp_or_python>"
+  lifecycle: false
+
+topics:
+  external_inputs: []
+  owned_outputs:
+    - name: "<output_topic>"
+      message_type: "<message_type>"
+      kind: "data"
+      deadline_ms: 1500
+  heartbeat:
+    name: "/<module_name>/heartbeat"
+    message_type: "std_msgs/msg/String"
+    period_ms: 200
+    deadline_ms: 500
+    liveliness_ms: 0
+
+services:
+  register: "/management/register_module"
+  deregister: "/management/deregister_module"
+  request_deregister: "/<module_name>/request_deregister"
+
+files:
+  source:
+    - "<relative/source_file>"
+  yaml:
+    - "<relative/yaml_file>"
+  build:
+    - "CMakeLists.txt"
+  dependencies:
+    - "package.xml"
+  launch: []
+```
+
+Manifest rules:
+
+- `profile` must be a top-level key.
+- `ros_distribution` must be a top-level key.
+- Do not create a top-level `validator:` key.
+- All topic definitions must be under top-level `topics:`.
+- Use `topics.owned_outputs[].name`, not `topic`.
+- Use `topics.heartbeat.name`, not `topic`.
+- `files.source`, `files.yaml`, `files.build`, `files.dependencies`, and `files.launch` must all be lists.
+- Paths in `files` must be relative to the adapted package or folder root.
+
 ## AI-Assisted Integration Guidance
 
 When using this template with an AI assistant, keep the prompt strict.
