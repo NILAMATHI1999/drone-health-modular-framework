@@ -1,0 +1,6 @@
+  langchain-core
+  langchain-text-splitters
+  PyYAML
+  pytest
+  sentence-transformers==5.7.0
+  transformers==4.57.6

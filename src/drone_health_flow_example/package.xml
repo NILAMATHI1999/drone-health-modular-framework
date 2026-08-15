@@ -4,7 +4,7 @@
     <version>0.1.0</version>
     <description>Simulated flow velocity sensor example for the drone health monitoring framework.</description>
 
-    <maintainer email="nilamathirp0199@gmail.com">nila</maintainer>
+    <maintainer email="maintainer@example.com">maintainer</maintainer>
     <license>MIT</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>

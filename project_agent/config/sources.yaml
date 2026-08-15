@@ -1,0 +1,24 @@
+  include_extensions:
+    - ".cpp"
+    - ".hpp"
+    - ".h"
+    - ".py"
+    - ".md"
+    - ".yaml"
+    - ".yml"
+    - ".xml"
+    - ".msg"
+    - ".srv"
+
+  include_names:
+    - "CMakeLists.txt"
+    - "package.xml"
+
+  exclude_directories:
+    - ".git"
+    - ".venv"
+    - "build"
+    - "install"
+    - "log"
+    - "tools"
+    - "project_agent"

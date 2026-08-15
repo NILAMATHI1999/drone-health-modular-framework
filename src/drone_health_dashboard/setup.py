@@ -18,8 +18,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Nila',
-    maintainer_email='nila@example.com',
+    maintainer='maintainer',
+    maintainer_email='maintainer@example.com',
     description='Web dashboard and ROS bridge for drone health monitoring.',
     license='MIT',
     scripts=[

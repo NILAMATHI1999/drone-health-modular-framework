@@ -1,0 +1,118 @@
+questions:
+  - id: management_responsibility
+    question: What does ManagementNode do in the Drone Health Framework?
+    expected_sources:
+      - src/drone_health_core/management/README.md
+      - src/drone_health_core/management/management_node.cpp
+
+  - id: health_monitor_responsibility
+    question: How does HealthMonitor monitor registered runtime topics?
+    expected_sources:
+      - src/drone_health_core/health_monitor/README.md
+      - src/drone_health_core/health_monitor/health_monitor_node.cpp
+
+  - id: supervisor_responsibility
+    question: How does SupervisorNode react to unhealthy critical components?
+    expected_sources:
+      - src/drone_health_core/supervisor/README.md
+      - src/drone_health_core/supervisor/supervisor_node.cpp
+
+  - id: registration_request
+    question: Which fields must a node send when registering with Management?
+    expected_sources:
+      - src/drone_health_interfaces/srv/RegisterModule.srv
+      - src/drone_health_interfaces/msg/MonitorSpec.msg
+
+  - id: monitor_spec_fields
+    question: What information is contained in a MonitorSpec?
+    expected_sources:
+      - src/drone_health_interfaces/msg/MonitorSpec.msg
+
+  - id: publisher_owned_topics
+    question: Which topics should a publisher node register for health monitoring?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+      - src/drone_health_registrable_template/template_node/registrable_publisher_template_node.cpp
+
+  - id: subscriber_input_ownership
+    question: Should a subscriber register an input topic published by another node?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+      - src/drone_health_registrable_template/template_node/registrable_subscriber_template_node.cpp
+
+  - id: processing_output
+    question: What should a processing node register when it subscribes to input and publishes output?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+      - src/drone_health_registrable_template/template_node/registrable_subscriber_template_node.cpp
+
+  - id: service_monitoring
+    question: Why does the service template register its heartbeat but not its ROS service?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+      - src/drone_health_registrable_template/template_node/registrable_service_template_node.cpp
+
+  - id: manual_deregistration
+    question: How does a template node request planned deregistration before shutdown?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+      - src/drone_health_registrable_template/template_node/registrable_publisher_template_node.cpp
+
+  - id: automatic_deregistration
+    question: Is automatic cycle-based deregistration required, and what should replace it?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+
+  - id: planned_inactive_state
+    question: What state does Management publish after successful planned deregistration?
+    expected_sources:
+      - src/drone_health_core/management/README.md
+      - src/drone_health_core/management/management_node.cpp
+
+  - id: yaml_node_key
+    question: How must the YAML top-level key relate to the C++ ROS node name?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/README.md
+      - src/drone_health_registrable_template/config/cpu_temperature_publisher.yaml
+
+  - id: template_cmake
+    question: Which CMake additions are needed to build and install a registrable node executable?
+    expected_sources:
+      - src/drone_health_registrable_template/CMakeLists.txt
+      - src/drone_health_registrable_template/template_node/README.md
+
+  - id: template_dependencies
+    question: Which package dependencies are required by the registrable templates?
+    expected_sources:
+      - src/drone_health_registrable_template/package.xml
+      - src/drone_health_registrable_template/CMakeLists.txt
+
+  - id: zenoh_timeout_fallback
+    question: How does HealthMonitor detect stale topics when Zenoh lacks supported QoS events?
+    expected_sources:
+      - src/drone_health_core/health_monitor/README.md
+      - src/drone_health_core/health_monitor/health_monitor_node.cpp
+
+  - id: unexpected_node_stop
+    question: What health result is expected when a registered publisher stops without deregistering?
+    expected_sources:
+      - src/drone_health_core/health_monitor/README.md
+      - src/drone_health_core/health_monitor/health_monitor_node.cpp
+
+  - id: cpu_temperature_monitors
+    question: Which heartbeat and data topics does the CPU temperature example register?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/cpu_temperature_publisher.cpp
+      - src/drone_health_registrable_template/config/cpu_temperature_publisher.yaml
+
+  - id: deadline_validation
+    question: Why must a monitored topic deadline be greater than its publishing period?
+    expected_sources:
+      - src/drone_health_registrable_template/template_node/registrable_publisher_template_node.cpp
+      - src/drone_health_registrable_template/template_node/README.md
+
+  - id: dashboard_runtime_modules
+    question: How does the dashboard obtain and display dynamically registered modules?
+    expected_sources:
+      - src/drone_health_dashboard/README.md
+      - src/drone_health_dashboard/scripts/dashboard_bridge.py

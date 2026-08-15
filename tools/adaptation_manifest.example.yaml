@@ -1,0 +1,47 @@
+
+  profile: "python-lifecycle-processing"
+
+  ros_distribution: "jazzy"
+
+  node:
+    name: "yolo_node"
+    namespace: "/yolo"
+    module_name: "yolo_node"
+    language: "python"
+    lifecycle: true
+
+  topics:
+    external_inputs:
+      - name: "/image_raw"
+        message_type: "sensor_msgs/msg/Image"
+
+    owned_outputs:
+      - name: "/yolo/detections"
+        message_type: "yolo_msgs/msg/DetectionArray"
+        kind: "data"
+        deadline_ms: 1000
+
+    heartbeat:
+      name: "/yolo/heartbeat"
+      message_type: "std_msgs/msg/String"
+      period_ms: 200
+      deadline_ms: 500
+      liveliness_ms: 0
+
+  services:
+    request_deregister: "/yolo/request_deregister"
+    register: "/management/register_module"
+    deregister: "/management/deregister_module"
+
+  files:
+    source:
+      - "yolo_ros/yolo_ros/yolo_node.py"
+    yaml:
+      - "yolo_ros/config/yolo_health.yaml"
+    build:
+      - "yolo_ros/setup.py"
+    dependencies:
+      - "yolo_ros/package.xml"
+    launch:
+      - "yolo_bringup/launch/yolo.launch.py"
+      - "yolo_bringup/launch/yolov8.launch.py"
