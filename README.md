@@ -8,7 +8,7 @@ A comprehensive, modular ROS 2 framework for autonomous drone health monitoring,
 
 ---
 
-## 📋 Prerequisites & Installation
+## Prerequisites & Installation
 
 ### System Requirements
 - **OS:** Ubuntu 22.04 LTS or later
@@ -65,7 +65,7 @@ pip install flask flask-cors python-socketio
 
 ---
 
-## ✅ Verify Your Setup
+##  Verify Your Setup
 
 Before starting the full system, verify everything is installed correctly:
 
@@ -88,7 +88,7 @@ If any command fails, review the Prerequisites section above or check the Troubl
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ```mermaid
 graph TD
@@ -203,7 +203,7 @@ graph TD
 
 ---
 
-## 📦 Package Overview
+##  Package Overview
 
 | Package | Purpose |
 |---|---|
@@ -219,7 +219,7 @@ graph TD
 
 ---
 
-## 🚀 Complete Launch Sequence
+##  Complete Launch Sequence
 
 ### 0. Setup Workspace
 
@@ -378,7 +378,7 @@ nano src/drone_health_dashboard/config/dashboard.yaml
 
 ---
 
-## 🧪 Test Cases & Manual Commands
+##  Test Cases & Manual Commands
 
 ### Mission State Control
 
@@ -436,7 +436,7 @@ ros2 service call /management/set_module_inactive drone_health_interfaces/srv/Se
 
 ---
 
-## 🔄 Data Flow Summary
+##  Data Flow Summary
 
 ```mermaid
 graph LR
@@ -454,7 +454,7 @@ graph LR
 
 ---
 
-## 🔧 Troubleshooting Guide
+##  Troubleshooting Guide
 
 ### "Package not found" Error
 
@@ -715,7 +715,7 @@ colcon build --packages-select drone_health_core --event-handlers console_direct
 
 ---
 
-## 📊 Getting Help
+##  Getting Help
 
 - **ROS 2 Documentation:** https://docs.ros.org/en/jazzy/
 - **View node logs:** `ros2 run drone_health_core management_node 2>&1 | tee node.log`
