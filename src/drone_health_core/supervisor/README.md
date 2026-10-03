@@ -4,7 +4,7 @@ A high-level decision-making node that fuses **Safety Status**, **System Health*
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```mermaid
 flowchart TD
@@ -38,7 +38,7 @@ flowchart TD
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 colcon build --packages-select drone_health_core
@@ -79,7 +79,7 @@ supervisor_node:
 
 ---
 
-## 📡 Interfaces
+##  Interfaces
 
 | | Topic/Service | Type | Description |
 |---|---|---|---|
@@ -105,7 +105,7 @@ classDiagram
 
 ---
 
-## 🌟 Why It's Reusable
+##  Why It's Reusable
 
 | Feature | Benefit |
 |---|---|
@@ -123,7 +123,7 @@ graph LR
 
 ---
 
-## 🔄 Global Mode State Machine
+##  Global Mode State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -148,7 +148,7 @@ stateDiagram-v2
 
 ---
 
-## 📊 Mode Decision Logic
+##  Mode Decision Logic
 
 | Current Condition | Resulting Mode | Command Allowed? | Reason Code |
 |---|---|---|---|
@@ -163,7 +163,7 @@ stateDiagram-v2
 
 ---
 
-## 🛠️ Build & Run
+##  Build & Run
 
 ```bash
 # Build
@@ -171,7 +171,7 @@ colcon build --packages-select drone_health_core
 source install/setup.bash
 
 # Run
-ros2 run drone_health_core supervisor_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/supervisor/supervisor.yaml
+--params-file src/drone_health_core/supervisor/supervisor.yaml
 
 # Debug
 ros2 topic echo /supervisor/status
@@ -180,7 +180,7 @@ ros2 service call /supervisor/reset_emergency_stop std_srvs/srv/Trigger "{}"
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ```mermaid
 graph LR
@@ -193,6 +193,6 @@ graph LR
 
 ---
 
-## 📄 License
+##  License
 
 MIT License. Free to use for academic and commercial projects.
