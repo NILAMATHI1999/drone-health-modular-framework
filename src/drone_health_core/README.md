@@ -6,7 +6,7 @@ Core health, management, and supervision package for the drone health monitoring
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 The three nodes form a layered pipeline: raw topic diagnostics flow upward into mission/maintenance context, which then flows into a single global Go/No-Go decision.
 
@@ -38,7 +38,7 @@ graph TD
 
 ---
 
-## 📦 Nodes
+##  Nodes
 
 ```text
 health_monitor/
@@ -56,7 +56,7 @@ supervisor/
 
 ---
 
-## 🔗 Inter-Node Communication
+##  Inter-Node Communication
 
 ```mermaid
 sequenceDiagram
@@ -82,7 +82,7 @@ sequenceDiagram
 
 ---
 
-## 🧩 Responsibility Split
+##  Responsibility Split
 
 ### 🩺 Health Monitor
 | Capability | Detail |
@@ -93,7 +93,7 @@ sequenceDiagram
 | Mission awareness | Ignores planned-inactive topics/modules so expected downtime is not reported as a failure |
 | Output | `/health/status` per-topic health report |
 
-### 🛡️ Management Node
+###  Management Node
 | Capability | Detail |
 |---|---|
 | Mission control | `mission_active` flag with strict safety interlocks |
@@ -102,7 +102,7 @@ sequenceDiagram
 | Planned inactivity | Tracks per-module/topic reasons (`maintenance`, `optional_disabled`, etc.) |
 | Output | `/management/state`, `/management/heartbeat` |
 
-### 🧭 Supervisor Node
+###  Supervisor Node
 | Capability | Detail |
 |---|---|
 | Fusion | Combines `/safety/status`, `/health/status`, `/network_status`, `/management/state` |
@@ -113,7 +113,7 @@ sequenceDiagram
 
 ---
 
-## 🔄 Combined Decision Flow
+##  Combined Decision Flow
 
 ```mermaid
 stateDiagram-v2
@@ -131,7 +131,7 @@ stateDiagram-v2
 
 ---
 
-## 🚫 What This Package Does Not Do
+##  What This Package Does Not Do
 
 This package is intentionally scoped to **diagnostics, lifecycle, and authorization** — not autonomy itself:
 
@@ -145,7 +145,7 @@ Those belong to separate modules or future robot/autonomy integration that **con
 
 ---
 
-## 🛠️ Build & Run
+##  Build & Run
 
 ### Build
 ```bash
@@ -174,7 +174,7 @@ ros2 topic echo /supervisor/status
 
 ---
 
-## 🔌 Runtime Registration / Deregistration
+##  Runtime Registration / Deregistration
 
 Runtime registration allows optional modules to join while ROS is already running. Runtime deregistration allows modules to officially leave without being treated as unexpected failures.
 
@@ -190,7 +190,7 @@ graph LR
 
 ---
 
-## 🎯 Mission Active Semantics
+##  Mission Active Semantics
 
 `mission_active` is intentionally a simple high-level boolean:
 
@@ -203,7 +203,7 @@ Complex mission behavior (waypoints, state machines, behavior trees, PX4/ArduPil
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ```mermaid
 graph LR
