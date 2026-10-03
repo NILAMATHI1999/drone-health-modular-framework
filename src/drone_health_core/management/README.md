@@ -1,4 +1,4 @@
-# 🛠️ ROS 2 Drone Health Management Node
+#  ROS 2 Drone Health Management Node
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble%20%7C%20Iron%20%7C%20Jazzy-blue)](https://docs.ros.org/)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-purple.svg)](https://en.cppreference.com/w/cpp/17)
@@ -9,7 +9,7 @@ Situated at the core of the system autonomy stack, the Management Node acts as t
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 The Management Node acts as the central state machine and interlock engine between high-level mission control, dynamic hardware/software modules, and downstream health monitors.
 
@@ -46,7 +46,7 @@ graph LR
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 * **🛡️ Mission Safety Interlocks:** Strictly prevents mission initiation if the system is in maintenance mode, if any **critical** module/topic is marked inactive, or if the high-level Supervisor node denies command permission or times out.
 * **🔌 Hybrid Module Registration:** Supports both static compile/YAML-time module declaration and dynamic runtime registration/deregistration via ROS 2 services, allowing flexible system reconfiguration.
@@ -55,7 +55,7 @@ graph LR
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Build the Package
 ```bash
@@ -65,7 +65,11 @@ source install/setup.bash
 
 ### 2. Run the Node with Configuration
 ```bash
+# BEFORE (BAD - hardcoded path)
 ros2 run drone_health_core management_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/management/management.yaml
+
+# AFTER (GOOD - portable)
+ros2 run drone_health_core management_node --ros-args --params-file src/drone_health_core/management/management.yaml
 ```
 
 ### 3. Monitor System Management State
@@ -75,7 +79,7 @@ ros2 topic echo /management/state
 
 ---
 
-## 🧠 Mission Interlock & Decision Logic
+##  Mission Interlock & Decision Logic
 
 The node enforces strict rules before allowing state transitions or module alterations during flight:
 
@@ -89,7 +93,7 @@ The node enforces strict rules before allowing state transitions or module alter
 
 ---
 
-## ⚙️ Configuration Guide
+##  Configuration Guide
 
 Configure baseline system modules, criticalities, and supervisor timeouts via YAML:
 
@@ -129,7 +133,7 @@ management_node:
 
 ---
 
-## 📡 ROS 2 Interfaces
+##  ROS 2 Interfaces
 
 ### Subscriptions & Publishers
 | Topic | Type | Direction | Description |
@@ -149,5 +153,5 @@ management_node:
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial robotics projects.
