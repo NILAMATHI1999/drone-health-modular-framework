@@ -65,10 +65,6 @@ source install/setup.bash
 
 ### 2. Run the Node with Configuration
 ```bash
-# BEFORE (BAD - hardcoded path)
-ros2 run drone_health_core management_node --ros-args --params-file /home/nila/Desktop/drone_health_modular_ws/src/drone_health_core/management/management.yaml
-
-# AFTER (GOOD - portable)
 ros2 run drone_health_core management_node --ros-args --params-file src/drone_health_core/management/management.yaml
 ```
 
