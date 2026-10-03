@@ -1,4 +1,4 @@
-# 🚁 ROS 2 Mission Manager Example Node
+#  ROS 2 Mission Manager Example Node
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble%20%7C%20Iron%20%7C%20Jazzy-blue)](https://docs.ros.org/)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-purple.svg)](https://en.cppreference.com/w/cpp/17)
@@ -9,13 +9,13 @@ A simple demonstration node that simulates an external autonomy stack requesting
 
 ---
 
-## 🏗️ Architecture & Integration
+##  Architecture & Integration
 
 ```mermaid
 graph LR
-    MM["🚁 Mission Manager<br/>(Example Node)"]
-    MN["🎛️ Management Node<br/>(drone_health_core)"]
-    DB["📊 Dashboard / Logs"]
+    MM[" Mission Manager<br/>(Example Node)"]
+    MN[" Management Node<br/>(drone_health_core)"]
+    DB[" Dashboard / Logs"]
 
     MM -->|"1. Request Mission<br/>/management/set_mission_active"| MN
     MM -->|"2. Publish Phase<br/>/mission/phase"| DB
@@ -28,7 +28,7 @@ graph LR
 
 ---
 
-## 🔄 Internal State Machine
+##  Internal State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -46,7 +46,7 @@ stateDiagram-v2
 
 ---
 
-## 📡 Interfaces
+##  Interfaces
 
 ### Published Topics
 | Topic | Type | Description |
@@ -60,7 +60,7 @@ stateDiagram-v2
 
 ---
 
-## ⚙️ Parameters
+##  Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -70,7 +70,7 @@ stateDiagram-v2
 
 ---
 
-## 🚀 Build & Run
+##  Build & Run
 
 ### Build
 ```bash
@@ -101,7 +101,7 @@ ros2 topic echo /management/state
 
 ---
 
-## 🛡️ Failure & Edge Case Behavior
+##  Failure & Edge Case Behavior
 
 * **Service Not Ready:** If the Management Node isn't running, the Mission Manager will log a warning and retry until the service becomes available.
 * **Request Rejected:** If the Supervisor/Management Node rejects the mission start (e.g., due to `maintenance_mode` or unhealthy sensors), the Mission Manager gracefully falls back to `WAITING_TO_START` and will retry.
@@ -112,7 +112,7 @@ ros2 topic echo /management/state
 
 ---
 
-## 🌍 Real-World Context
+##  Real-World Context
 
 In a production drone, you would **delete this node** and replace it with your actual autonomy system. Your real system would:
 1. Listen to `/supervisor/status` to ensure `command_allowed == true`.
@@ -121,6 +121,6 @@ In a production drone, you would **delete this node** and replace it with your a
 
 ---
 
-## 📄 License
+##  License
 
 MIT License. Free to use for academic and commercial projects.
