@@ -1,4 +1,4 @@
-# 🖥️ ROS 2 Drone Health Dashboard
+#  ROS 2 Drone Health Dashboard
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble%20%7C%20Iron%20%7C%20Jazzy-blue)](https://docs.ros.org/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -7,34 +7,34 @@ A real-time web dashboard for the Drone Health Monitoring Framework. A lightweig
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```mermaid
 graph TD
-    SUP["🧠 /supervisor/status"] --> Bridge
-    SAFE["🛡️ /safety/status"] --> Bridge
-    HM["🏥 /health/status"] --> Bridge
-    MGMT["🎛️ /management/state"] --> Bridge
-    LIDAR["📡 /lidar/nearest_obstacle"] --> Bridge
-    VEL["🏃 /vehicle/velocity"] --> Bridge
-    NET["🌐 /network_status, /network/*"] --> Bridge
+    SUP[" /supervisor/status"] --> Bridge
+    SAFE[" /safety/status"] --> Bridge
+    HM[" /health/status"] --> Bridge
+    MGMT[" /management/state"] --> Bridge
+    LIDAR[" /lidar/nearest_obstacle"] --> Bridge
+    VEL[" /vehicle/velocity"] --> Bridge
+    NET[" /network_status, /network/*"] --> Bridge
 
-    subgraph Bridge ["🐍 dashboard_bridge.py"]
-        State["📦 Shared State<br/>(thread-safe dict)"]
-        Filter["🔍 Planned-Inactive Filter"]
-        HTTP["🌍 ThreadingHTTPServer<br/>:8080"]
+    subgraph Bridge [" dashboard_bridge.py"]
+        State[" Shared State<br/>(thread-safe dict)"]
+        Filter[" Planned-Inactive Filter"]
+        HTTP[" ThreadingHTTPServer<br/>:8080"]
         State --> Filter --> HTTP
     end
 
     HTTP -->|"GET /"| Static["📄 index.html / app.js / styles.css"]
-    HTTP -->|"GET /events<br/>(SSE stream, 0.5s)"| Browser["🖥️ Browser Dashboard"]
+    HTTP -->|"GET /events<br/>(SSE stream, 0.5s)"| Browser[" Browser Dashboard"]
 ```
 
 **Flow**: ROS callbacks update a shared, lock-protected state dictionary. Health entries for modules/topics marked `planned_inactive` by the Management Node are automatically filtered out. A background `ThreadingHTTPServer` serves the static frontend and streams the state as Server-Sent Events every 500ms. The browser never talks to ROS directly — only to this HTTP bridge.
 
 ---
 
-## 📦 Package Contents
+##  Package Contents
 
 ```
 drone_health_dashboard/
@@ -49,7 +49,7 @@ drone_health_dashboard/
 
 ---
 
-## 🚀 Build & Run
+##  Build & Run
 
 ```bash
 colcon build --packages-select drone_health_dashboard
@@ -69,7 +69,7 @@ ros2 run drone_health_dashboard dashboard_bridge.py --ros-args -p web_port:=9090
 
 ---
 
-## 📡 Subscribed Topics
+##  Subscribed Topics
 
 | Topic | Type | Drives |
 |---|---|---|
@@ -83,7 +83,7 @@ ros2 run drone_health_dashboard dashboard_bridge.py --ros-args -p web_port:=9090
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 
 | Feature | Benefit |
 |---|---|
@@ -97,7 +97,7 @@ ros2 run drone_health_dashboard dashboard_bridge.py --ros-args -p web_port:=9090
 
 ---
 
-## 🛡️ Staleness & Failure Detection
+##  Staleness & Failure Detection
 
 ```mermaid
 flowchart TD
@@ -118,7 +118,7 @@ flowchart TD
 
 ---
 
-## 🔌 Planned-Inactive Handling
+##  Planned-Inactive Handling
 
 ```mermaid
 sequenceDiagram
@@ -143,7 +143,7 @@ This prevents the dashboard from showing deregistered/maintenance modules as red
 
 ---
 
-## 🎨 Color Coding Convention
+##  Color Coding Convention
 
 | Color | Meaning |
 |---|---|
@@ -154,14 +154,14 @@ This prevents the dashboard from showing deregistered/maintenance modules as red
 
 ---
 
-## 🧬 Architecture Rule
+##  Architecture Rule
 
 > **The dashboard never decides — it only displays.**
 
 ```mermaid
 graph LR
-    ROS["🧠 ROS Nodes<br/>(Supervisor, Health, Management)"] -->|"decide"| Decision["✅ Safety Decisions"]
-    Bridge["🖥️ Dashboard Bridge"] -->|"visualize"| Decision
+    ROS[" ROS Nodes<br/>(Supervisor, Health, Management)"] -->|"decide"| Decision["✅ Safety Decisions"]
+    Bridge[" Dashboard Bridge"] -->|"visualize"| Decision
     Bridge -.->|"never computes"| Decision
 ```
 
@@ -169,7 +169,7 @@ All `SAFE/UNSAFE`, `NORMAL/HOLD/FAILSAFE`, and health status decisions are made 
 
 ---
 
-## 🛡️ Failure Behavior
+## Failure Behavior
 
 | Scenario | Dashboard Behavior |
 |---|---|
@@ -180,7 +180,7 @@ All `SAFE/UNSAFE`, `NORMAL/HOLD/FAILSAFE`, and health status decisions are made 
 
 ---
 
-## 🛠️ Debug
+##  Debug
 
 ```bash
 # Confirm the bridge is receiving data
@@ -195,7 +195,7 @@ curl http://localhost:8080/
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ```mermaid
 graph LR
@@ -208,6 +208,6 @@ graph LR
 
 ---
 
-## 📄 License
+##  License
 
 MIT License. Free to use for academic and commercial projects.
