@@ -9,20 +9,20 @@ These nodes illustrate practical implementation patterns for **optional payload 
 
 ---
 
-## 🏗️ Example Interaction Architecture
+##  Example Interaction Architecture
 
 This diagram illustrates how the demo nodes interact with the production core framework (`drone_health_core`) during a typical mission simulation:
 
 ```mermaid
 graph TD
     subgraph Core [drone_health_core]
-        MGMT["🎛️ Management Node"]
-        HM["🏥 Health Monitor"]
+        MGMT[" Management Node"]
+        HM[" Health Monitor"]
     end
 
     subgraph Examples [drone_health_examples]
-        MM["🚀 mission_manager_node<br/>Simulates Flight Executive"]
-        CAM["📷 simulated_camera_node<br/>Simulates Optional Payload"]
+        MM[" mission_manager_node<br/>Simulates Flight Executive"]
+        CAM[" simulated_camera_node<br/>Simulates Optional Payload"]
     end
 
     MM -->|1. Request Mission Start<br/>/management/set_mission_active| MGMT
@@ -36,7 +36,7 @@ graph TD
 
 ---
 
-## 📦 Included Nodes
+##  Included Nodes
 
 | Node Name | Simulated Role | Key Behavior Demonstrated |
 | :--- | :--- | :--- |
@@ -45,7 +45,7 @@ graph TD
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Build the Package
 Ensure the core interface and management packages are built first, then compile the examples:
@@ -74,7 +74,7 @@ ros2 run drone_health_examples mission_manager_node
 
 ---
 
-## 🎭 Walkthrough of the Demo Workflow
+##  Walkthrough of the Demo Workflow
 
 When both example nodes run alongside the core framework, you can observe the following automated sequence:
 
@@ -93,7 +93,7 @@ When both example nodes run alongside the core framework, you can observe the fo
 
 ---
 
-## 🛡️ Core Framework Independence
+##  Core Framework Independence
 
 A design goal of this architecture is **loose coupling**. The core safety framework does not depend on these demo nodes:
 
@@ -105,5 +105,5 @@ A design goal of this architecture is **loose coupling**. The core safety framew
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial robotics projects.
