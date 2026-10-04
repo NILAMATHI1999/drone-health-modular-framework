@@ -9,21 +9,21 @@ A simulated optional payload node that demonstrates **graceful self-deregistrati
 
 ---
 
-## 🏗️ Architecture & Integration
+##  Architecture & Integration
 
 ```mermaid
 graph TD
-    MM["🚁 Mission Manager"] -->|"/mission/phase<br/>(INSPECTION_COMPLETE)"| CAM
-    CLI["🖥️ CLI / External"] -->|"/camera/request_deregister"| CAM
+    MM[" Mission Manager"] -->|"/mission/phase<br/>(INSPECTION_COMPLETE)"| CAM
+    CLI[" CLI / External"] -->|"/camera/request_deregister"| CAM
 
-    subgraph CAM ["📷 simulated_camera_node"]
-        Gen["🎨 Image Generator<br/>(Shifting RGB)"]
-        Logic["🧠 Deregistration Logic"]
+    subgraph CAM [" simulated_camera_node"]
+        Gen[" Image Generator<br/>(Shifting RGB)"]
+        Logic[" Deregistration Logic"]
     end
 
-    CAM -->|"/management/register_module<br/>(heartbeat + image MonitorSpec)"| MN["🎛️ Management Node"]
-    MN -->|"managed_modules[].monitors"| HM["🏥 Health Monitor"]
-    CAM -->|"/camera/image_raw"| Sub["👁️ Vision Pipeline"]
+    CAM -->|"/management/register_module<br/>(heartbeat + image MonitorSpec)"| MN[" Management Node"]
+    MN -->|"managed_modules[].monitors"| HM[" Health Monitor"]
+    CAM -->|"/camera/image_raw"| Sub[" Vision Pipeline"]
     CAM -->|"/camera/image_raw<br/>/camera/heartbeat"| HM
     Logic -->|"/management/deregister_module<br/>(reason: deregistered)"| MN
     
@@ -35,7 +35,7 @@ graph TD
 
 ---
 
-## 🔄 Internal State Machine
+##  Internal State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -51,7 +51,7 @@ stateDiagram-v2
 
 ---
 
-## 📡 Interfaces
+##  Interfaces
 
 ### Published Topics
 | Topic | Type | QoS | Description |
@@ -73,7 +73,7 @@ stateDiagram-v2
 
 ---
 
-## ⚙️ Parameters
+##  Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -87,7 +87,7 @@ stateDiagram-v2
 
 ---
 
-## 🚀 Build & Run
+##  Build & Run
 
 ### Build
 ```bash
@@ -117,7 +117,7 @@ ros2 topic echo /management/state
 
 ---
 
-## 🛡️ Graceful Exit vs. Unexpected Failure
+##  Graceful Exit vs. Unexpected Failure
 
 This node is specifically designed to teach the difference between a **fault** and a **planned exit**:
 
@@ -128,7 +128,7 @@ This node is specifically designed to teach the difference between a **fault** a
 
 ---
 
-## 🌍 Real-World Context
+##  Real-World Context
 
 In a physical drone, this pattern is used for:
 * **Jettisonable payloads** (e.g., a drop mechanism that detaches mid-flight).
@@ -139,6 +139,6 @@ By using runtime `register_module` and `deregister_module` services, the autonom
 
 ---
 
-## 📄 License
+##  License
 
 MIT License. Free to use for academic and commercial projects.
