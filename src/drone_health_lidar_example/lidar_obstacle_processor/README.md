@@ -7,11 +7,11 @@ A reference LiDAR obstacle processing node that consumes raw `sensor_msgs/LaserS
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```mermaid
 graph TD
-    LIDAR["📡 /lidar/scan<br/>sensor_msgs/LaserScan<br/>(Best Effort)"] --> PROC["⚙️ lidar_obstacle_processor_node"]
+    LIDAR[" /lidar/scan<br/>sensor_msgs/LaserScan<br/>(Best Effort)"] --> PROC[" lidar_obstacle_processor_node"]
     
     subgraph Core ["Processing Logic"]
         CLAMP["Clamp range_max to<br/>max_valid_range_m"]
@@ -22,18 +22,18 @@ graph TD
     
     PROC --> CLAMP --> FILTER --> FIND --> FALLBACK
     
-    FALLBACK --> OBS["📏 /lidar/nearest_obstacle<br/>std_msgs/Float32<br/>(Reliable + Deadline)"]
-    PROC --> HB["💓 /lidar_obstacle_processor/heartbeat<br/>(Reliable + Deadline + Liveliness)"]
+    FALLBACK --> OBS[" /lidar/nearest_obstacle<br/>std_msgs/Float32<br/>(Reliable + Deadline)"]
+    PROC --> HB[" /lidar_obstacle_processor/heartbeat<br/>(Reliable + Deadline + Liveliness)"]
     
-    OBS --> SF["🛡️ Safety Fusion Node"]
-    HB --> HM["🏥 Health Monitor"]
+    OBS --> SF[" Safety Fusion Node"]
+    HB --> HM[" Health Monitor"]
 ```
 
 **Flow**: Each incoming `LaserScan` is processed synchronously in the subscription callback. The effective max range is clamped to `min(scan.range_max, max_valid_range_m)`. Every reading is checked for `isfinite()` and bounds `[range_min, effective_max_range]`; the smallest valid reading is published. If **no** valid reading exists, the node publishes the `effective_max_range` as a safe fallback (never `inf` or `NaN`).
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Build
 ```bash
@@ -54,7 +54,7 @@ ros2 topic echo /lidar_obstacle_processor/heartbeat
 
 ---
 
-## 📡 Interfaces
+##  Interfaces
 
 | Direction | Topic | Type | QoS |
 |---|---|---|---|
@@ -64,7 +64,7 @@ ros2 topic echo /lidar_obstacle_processor/heartbeat
 
 ---
 
-## ⚙️ Parameters
+##  Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -78,7 +78,7 @@ ros2 topic echo /lidar_obstacle_processor/heartbeat
 
 ---
 
-## 🔄 Nearest Range Algorithm
+##  Nearest Range Algorithm
 
 ```cpp
 effective_max_range = min(scan.range_max, max_valid_range_m)
@@ -102,7 +102,7 @@ else:
 
 ---
 
-## ⚠️ Failure & Safety Behavior
+##  Failure & Safety Behavior
 
 | Scenario | Processor Behavior | Downstream Impact |
 |---|---|---|
@@ -113,7 +113,7 @@ else:
 
 ---
 
-## 🌟 Integration Benefits
+##  Integration Benefits
 
 | Feature | Benefit |
 |---|---|
@@ -124,7 +124,7 @@ else:
 
 ---
 
-## 🛠️ Build & Debug
+##  Build & Debug
 
 ```bash
 # Build
@@ -142,7 +142,7 @@ ros2 topic hz /lidar/scan
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ```mermaid
 graph LR
@@ -154,5 +154,5 @@ graph LR
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial robotics projects.
