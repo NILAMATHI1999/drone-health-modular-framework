@@ -7,43 +7,43 @@ A reference safety-critical node that fuses **obstacle distance**, **vehicle vel
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```mermaid
 graph TD
-    Obs["📏 /lidar/nearest_obstacle<br/>std_msgs/Float32"] --> Eval
-    Vel["🚗 /vehicle/velocity<br/>geometry_msgs/TwistStamped"] --> Eval
-    Health["🏥 /health/status<br/>HealthStatus"] --> Eval
+    Obs[" /lidar/nearest_obstacle<br/>std_msgs/Float32"] --> Eval
+    Vel[" /vehicle/velocity<br/>geometry_msgs/TwistStamped"] --> Eval
+    Health[" /health/status<br/>HealthStatus"] --> Eval
 
     subgraph Core ["Safety Fusion Engine (100ms loop)"]
         Fresh{Inputs Fresh?}
         Valid{Values Valid?}
         HealthCheck{Required Topics OK?}
-        Math["📐 Kinematic Math<br/>Braking + Reaction + Margin"]
+        Math[" Kinematic Math<br/>Braking + Reaction + Margin"]
         Eval --> Fresh
-        Fresh -->|No| Unsafe1["⛔ UNSAFE<br/>REASON_HEALTH_UNSAFE"]
+        Fresh -->|No| Unsafe1[" UNSAFE<br/>REASON_HEALTH_UNSAFE"]
         Fresh -->|Yes| Valid
-        Valid -->|No| Unknown1["❓ UNKNOWN<br/>REASON_INVALID_INPUT"]
+        Valid -->|No| Unknown1[" UNKNOWN<br/>REASON_INVALID_INPUT"]
         Valid -->|Yes| HealthCheck
-        HealthCheck -->|No| Unsafe2["⛔ UNSAFE<br/>REASON_HEALTH_UNSAFE"]
+        HealthCheck -->|No| Unsafe2[" UNSAFE<br/>REASON_HEALTH_UNSAFE"]
         HealthCheck -->|Yes| Math
     end
 
     Math --> Decision{Obstacle ≤ Clearance?}
-    Decision -->|Yes| Unsafe3["⛔ UNSAFE<br/>REASON_INSUFFICIENT_BRAKING_DISTANCE"]
-    Decision -->|No| Safe["✅ SAFE<br/>REASON_NONE"]
+    Decision -->|Yes| Unsafe3[" UNSAFE<br/>REASON_INSUFFICIENT_BRAKING_DISTANCE"]
+    Decision -->|No| Safe[" SAFE<br/>REASON_NONE"]
 
-    Unsafe1 & Unsafe2 & Unsafe3 & Safe & Unknown1 --> Pub["📊 /safety/status"]
-    Pub --> SV["🧠 Supervisor Node"]
+    Unsafe1 & Unsafe2 & Unsafe3 & Safe & Unknown1 --> Pub[" /safety/status"]
+    Pub --> SV[" Supervisor Node"]
 
-    Eval -.->|"/safety_fusion/heartbeat"| HM["🏥 Health Monitor"]
+    Eval -.->|"/safety_fusion/heartbeat"| HM[" Health Monitor"]
 ```
 
 **Flow**: A 100ms timer evaluates fused inputs in strict priority order — waiting for first data → freshness timeouts (per-topic) → value validation → upstream health validation → kinematic braking math → final SAFE/UNSAFE verdict. The Supervisor treats any non-`SAFE` state as a reason to block mission commands.
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Build
 ```bash
@@ -65,7 +65,7 @@ ros2 topic echo /safety/status
 
 ---
 
-## ⚙️ Configuration
+##  Configuration
 
 ```yaml
 safety_fusion_node:
@@ -119,7 +119,7 @@ The node throws a startup error if this is violated.
 
 ---
 
-## 📐 Safety Math
+##  Safety Math
 
 ```
 Required Clearance = Braking Distance + Reaction Distance + Safety Margin
@@ -130,7 +130,7 @@ Reaction Distance = speed × reaction_time_s
 
 ---
 
-## 📊 Decision Logic (Evaluated in Order)
+##  Decision Logic (Evaluated in Order)
 
 | # | Condition | Output State | Reason |
 |---|---|---|---|
@@ -144,7 +144,7 @@ Reaction Distance = speed × reaction_time_s
 
 ---
 
-## 📡 Interfaces
+##  Interfaces
 
 | | Topic | Type | Description |
 |---|---|---|---|
@@ -173,7 +173,7 @@ classDiagram
 
 ---
 
-## 🌟 Why It's Reusable
+##  Why It's Reusable
 
 | Feature | Benefit |
 |---|---|
@@ -184,7 +184,7 @@ classDiagram
 
 ---
 
-## 🛠️ Build & Run
+##  Build & Run
 
 ```bash
 # Build
@@ -203,7 +203,7 @@ ros2 topic echo /safety_fusion/heartbeat
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ```mermaid
 graph LR
@@ -216,5 +216,5 @@ graph LR
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial robotics projects.
