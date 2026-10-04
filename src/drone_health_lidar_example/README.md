@@ -7,18 +7,18 @@ LiDAR example package for the Drone Health Monitoring Framework, demonstrating a
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```mermaid
 graph LR
     SIM["🎲 simulated_lidar_driver_node"] -->|"/lidar/scan<br/>sensor_msgs/LaserScan"| PROC["⚙️ lidar_obstacle_processor_node"]
-    PROC -->|"/lidar/nearest_obstacle<br/>std_msgs/Float32"| SF["🛡️ Safety Fusion Node"]
-    PROC -->|"/lidar_obstacle_processor/heartbeat"| HM["🏥 Health Monitor"]
+    PROC -->|"/lidar/nearest_obstacle<br/>std_msgs/Float32"| SF[" Safety Fusion Node"]
+    PROC -->|"/lidar_obstacle_processor/heartbeat"| HM[" Health Monitor"]
 ```
 
 ---
 
-## 📦 Nodes
+##  Nodes
 
 | Node | Input | Output | Description |
 |---|---|---|---|
@@ -27,7 +27,7 @@ graph LR
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 colcon build --packages-select drone_health_lidar_example
@@ -43,7 +43,7 @@ ros2 topic echo /lidar/nearest_obstacle
 
 ---
 
-## 🔄 Data Flow
+##  Data Flow
 
 ```text
 simulated_lidar_driver_node
@@ -58,13 +58,13 @@ simulated_lidar_driver_node
 
 ---
 
-## 🛠️ Real Hardware Replacement
+##  Real Hardware Replacement
 
 Replace `simulated_lidar_driver_node` with any real LiDAR driver publishing `sensor_msgs/LaserScan` on `/lidar/scan`. The obstacle processor needs **no changes** — it is hardware-agnostic.
 
 ---
 
-## ⚠️ Failure Behavior
+##  Failure Behavior
 
 | Scenario | Effect |
 |---|---|
@@ -74,7 +74,7 @@ Replace `simulated_lidar_driver_node` with any real LiDAR driver publishing `sen
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ```mermaid
 graph LR
@@ -86,5 +86,5 @@ graph LR
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial projects.
