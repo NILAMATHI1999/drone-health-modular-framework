@@ -7,22 +7,22 @@ A reusable boilerplate node demonstrating the **correct lifecycle pattern** for 
 
 ---
 
-## 🏗️ Lifecycle Architecture
+##  Lifecycle Architecture
 
 ```mermaid
 graph TD
     subgraph Node [Registrable Template Node]
-        Start["🚀 Startup"]
-        Reg["📝 Register Request<br/>RegisterModule.srv"]
-        Active["💓 Active Publishing<br/>Heartbeat + Data"]
+        Start[" Startup"]
+        Reg[" Register Request<br/>RegisterModule.srv"]
+        Active[" Active Publishing<br/>Heartbeat + Data"]
         DeregSrv["/template/request_deregister<br/>Trigger.srv"]
-        Dereg["📤 Deregister Request<br/>DeregisterModule.srv"]
-        Shutdown["🛑 Clean Shutdown"]
+        Dereg[" Deregister Request<br/>DeregisterModule.srv"]
+        Shutdown[" Clean Shutdown"]
     end
 
     subgraph Core [drone_health_core]
-        MN["🎛️ Management Node"]
-        HM["🏥 Health Monitor"]
+        MN[" Management Node"]
+        HM[" Health Monitor"]
     end
 
     Start --> Reg
@@ -43,7 +43,7 @@ graph TD
 
 ---
 
-## 🎯 Purpose
+##  Purpose
 
 This package teaches the correct pattern for:
 
@@ -55,7 +55,7 @@ This package teaches the correct pattern for:
 
 ---
 
-## 📦 Package Structure
+##  Package Structure
 
 ```
 drone_health_registrable_template/
@@ -66,7 +66,7 @@ drone_health_registrable_template/
 
 ---
 
-## 🔄 Responsibility Split
+##  Responsibility Split
 
 This is an **example/template only** — it contains no core monitoring logic.
 
@@ -79,7 +79,7 @@ This is an **example/template only** — it contains no core monitoring logic.
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Build
 ```bash
@@ -105,7 +105,7 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
 
 ---
 
-## ⚙️ Parameters
+##  Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -123,7 +123,7 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
 
 ---
 
-## 📡 Interfaces
+##  Interfaces
 
 | | Name | Type | Role |
 |---|---|---|---|
@@ -135,7 +135,7 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
 
 ---
 
-## 📊 Expected vs Failure Behavior
+##  Expected vs Failure Behavior
 
 | Scenario | Management Node State | Health Monitor Verdict |
 |---|---|---|
@@ -145,23 +145,23 @@ ros2 service call /template/request_deregister std_srvs/srv/Trigger "{}"
 
 ---
 
-## 🧩 Current Scope & Future Extension
+##  Current Scope & Future Extension
 
 **Currently Supported:**
 - ✅ Runtime heartbeat monitoring (auto-spawned `GenericSubscription`)
 - ✅ Runtime data-topic monitoring with generic subscriptions
 
 **Future Work:**
-- 🔲 Multi-topic deregistration granularity (per-topic vs per-module)
+-  Multi-topic deregistration granularity (per-topic vs per-module)
 
 Use this template as a starting point for:
-- 📷 Camera / vision modules
-- 🛰️ GPS / positioning modules
-- 📶 Network adapters
-- 🔍 Inspection payloads
-- 🔧 Any removable robot component
+-  Camera / vision modules
+-  GPS / positioning modules
+-  Network adapters
+-  Inspection payloads
+-  Any removable robot component
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial robotics projects.
