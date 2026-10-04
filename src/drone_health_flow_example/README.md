@@ -7,17 +7,17 @@ A demonstration node that simulates an optical-flow / velocity sensor for the **
 
 ---
 
-## 🏗️ Role in the Health Monitoring Architecture
+##  Role in the Health Monitoring Architecture
 
 ```mermaid
 graph TD
     subgraph Sensor [drone_health_examples]
-        FLOW["🌊 simulated_flow_sensor_node"]
+        FLOW[" simulated_flow_sensor_node"]
     end
 
     subgraph Core [drone_health_core]
-        HM["🏥 Health Monitor"]
-        SF["🛡️ Safety Fusion"]
+        HM[" Health Monitor"]
+        SF[" Safety Fusion"]
     end
 
     FLOW -->|"/vehicle/velocity (TwistStamped, best-effort, deadline)"| HM
@@ -30,7 +30,7 @@ The node exists purely to **feed realistic, configurable telemetry** into the he
 
 ---
 
-## 🎯 Purpose
+##  Purpose
 
 Publishes simulated vehicle velocity and a heartbeat topic, with QoS settings (deadlines + liveliness lease) that mirror what a real flow/velocity sensor driver would provide. This allows downstream health and safety nodes to be tested for:
 
@@ -40,11 +40,11 @@ Publishes simulated vehicle velocity and a heartbeat topic, with QoS settings (d
 
 ---
 
-## 📥 Inputs
+##  Inputs
 
 None. This is a self-contained data source for simulation/testing.
 
-## 📤 Outputs
+##  Outputs
 
 | Topic | Type | QoS |
 | :--- | :--- | :--- |
@@ -53,7 +53,7 @@ None. This is a self-contained data source for simulation/testing.
 
 ---
 
-## ⚙️ Parameters
+##  Parameters
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
@@ -75,7 +75,7 @@ None. This is a self-contained data source for simulation/testing.
 
 ---
 
-## 🚀 Run Commands
+##  Run Commands
 
 **Default (stationary) mode:**
 ```bash
@@ -98,7 +98,7 @@ ros2 run drone_health_flow_example simulated_flow_sensor_node --ros-args \
 
 ---
 
-## 🎭 Expected Behavior
+##  Expected Behavior
 
 ### Stationary mode (default)
 ```text
@@ -120,7 +120,7 @@ In both modes, `/flow/heartbeat` is published every cycle and `assert_liveliness
 
 ---
 
-## 🛑 Failure Behavior
+##  Failure Behavior
 
 This node is also used to validate **degraded and failure paths** in the framework:
 
@@ -132,5 +132,5 @@ You can simulate a failure manually by killing the node mid-run, or by setting a
 
 ---
 
-## 📄 License
+##  License
 MIT License. Free to use for academic and commercial robotics projects.
