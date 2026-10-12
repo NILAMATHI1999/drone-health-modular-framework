@@ -12,7 +12,7 @@ A modular ROS 2 framework for autonomous drone health monitoring, system managem
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ```mermaid
 graph TD
@@ -114,7 +114,7 @@ graph TD
 
 ---
 
-## 📦 Package Overview
+##  Package Overview
 
 | Package | Purpose |
 |---|---|
@@ -137,7 +137,7 @@ Non-ROS tooling at the repository root:
 
 ---
 
-## 🆕 What's new on this branch
+##  What's new on this branch
 
 ### 1. Zenoh middleware support
 
@@ -184,7 +184,7 @@ Each one registers with `/management/register_module` at startup using `MonitorS
 
 ---
 
-## 🔧 Build
+##  Build
 
 ```bash
 # The repository root is the colcon workspace (packages live in src/)
@@ -200,7 +200,7 @@ source install/setup.bash
 
 ---
 
-## 🌐 Choosing the Middleware (RMW)
+##  Choosing the Middleware (RMW)
 
 ### Default DDS
 
@@ -230,7 +230,7 @@ All terminals must use the same RMW, otherwise nodes will not see each other. If
 
 ---
 
-## 🚀 Complete Launch Sequence
+##  Complete Launch Sequence
 
 ### 0. Prerequisites (every terminal)
 
@@ -339,7 +339,7 @@ Open in browser: **http://localhost:8080**
 
 ---
 
-## 🧪 Test Cases & Manual Commands
+##  Test Cases & Manual Commands
 
 ### Mission State Control
 
@@ -396,7 +396,7 @@ ros2 topic echo /health/status
 
 ---
 
-## 🤖 Project Assistant (`project_agent/`)
+## Project Assistant (`project_agent/`)
 
 ```bash
 cd project_agent
@@ -435,7 +435,7 @@ python3 tools/validate_yolo_adaptation.py <adaptation_dir>
 
 ---
 
-## 🔄 Data Flow Summary
+## Data Flow Summary
 
 ```mermaid
 graph LR
@@ -453,6 +453,6 @@ graph LR
 
 ---
 
-## 📄 License
+## License
 
 Licenses are declared per package: `drone_health_core` and `drone_health_interfaces` declare Apache-2.0, the other packages declare MIT. Check each `package.xml` before reuse.
